@@ -1,0 +1,150 @@
+html, body {
+  font-family: "Arial", sans-serif;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  color: #333;
+  overflow-x: hidden;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+h1, h2, h3 {
+  margin: 0;
+}
+
+main {
+  flex: 1;
+  padding: 0 clamp(1rem, 5vw, 3rem);
+}
+
+.header {
+  background: linear-gradient(to right, #4e54c8, #8f94fb);
+  padding: clamp(2rem, 6vw, 4rem) 0;
+  text-align: center;
+  color: white;
+}
+
+.header h1 {
+  font-size: clamp(2rem, 6vw, 4.5rem);
+}
+
+.header p {
+  font-size: clamp(1rem, 3vw, 2.2rem);
+}
+
+.about, .skills, .projects {
+  padding: clamp(1.5rem, 5vw, 3rem) 0;
+  text-align: center;
+}
+
+.about h2, .skills h2, .projects h2 {
+  font-size: clamp(1.5rem, 4vw, 3rem);
+  margin-bottom: clamp(1rem, 4vw, 2rem);
+  color: black;
+}
+
+.about {
+  padding-left: clamp(0.4rem, 2vw, 1.5rem);
+  padding-right: clamp(0.4rem, 2vw, 1.5rem);
+}
+
+.about p {
+  font-size: clamp(1rem, 2.5vw, 1.6rem);
+  font-weight: 450;
+  margin-bottom: 0;
+}
+
+.skills .skills-container {
+  display: flex;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  gap: clamp(0.5rem, 3vw, 1.5rem);
+}
+
+.skills .skill {
+  font-size: clamp(1rem, 2.5vw, 1.6rem);
+  background: linear-gradient(to right, #e78f6e, #f5cfa0);
+  padding: clamp(0.8rem, 3vw, 1.2rem);
+  width: clamp(120px, 25vw, 160px);
+  border-radius: 6px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  transition: transform 0.3s ease;
+  user-select: none;
+}
+
+.skills .skill:hover {
+  transform: scale(1.1);
+}
+
+.projects {
+  padding-top: clamp(2rem, 5vw, 4rem);
+  padding-bottom: 0;
+  margin-bottom: clamp(3rem, 8vw, 5rem);
+}
+
+.projects-grid {
+  display: grid;
+  column-gap: clamp(1rem, 2.1vw, 2rem);
+  row-gap: clamp(1rem, 8vw, 3rem);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 350px), 1fr));
+  justify-items: center;
+  margin-top: clamp(1.5rem, 5vw, 4rem);
+}
+
+.projects .project {
+  background: linear-gradient(to right, #6a11cb, #2575fc);
+  padding: clamp(1.2rem, 5vw, 2rem);
+  user-select: none;
+  border-radius: 10px;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+  width: 100%;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.projects .project h3 {
+  font-size: clamp(1.2rem, 3vw, 2rem);
+  color: white;
+  margin-bottom: 10px;
+}
+
+.projects .project p {
+  font-size: clamp(1rem, 2.2vw, 1.4rem);
+  color: white;
+  margin-bottom: 0;
+}
+
+.projects .project:hover {
+  transform: translateY(calc(-1 * clamp(8px, 2.9vw, 20px)));
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.view-all-projects {
+  margin-top: clamp(2rem, 5vw, 3rem);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.view-all-projects a {
+  font-size: clamp(1.1rem, 2.2vw, 1.6rem);
+  display: inline-block;
+  background: linear-gradient(to right, #3b8ef4, #0454b8);
+  color: white;
+  padding: clamp(0.7rem, 2vw, 1rem) clamp(1.4rem, 4vw, 2rem);
+  border-radius: 30px;
+  text-decoration: none;
+  font-weight: bold;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.view-all-projects a:hover {
+  transform: scale(1.05);
+}
