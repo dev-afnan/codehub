@@ -1,0 +1,178 @@
+body {
+  background: linear-gradient(to bottom, #3a4a6f, #1f2a47);
+  min-height: 100vh;
+  margin: 0;
+  box-sizing: border-box;
+  font-family: sans-serif;
+  color: white;
+  display: flex;
+  justify-content: center;
+  padding-top: clamp(10px, 3vh, 50px);
+  user-select: none;
+}
+
+.player-container {
+  width: 100%;
+  max-width: 400px;
+  border-radius: 20px;
+  padding: 20px 0;
+}
+
+@media (min-width: 1024px) and (min-height: 700px) {
+  body {
+    align-items: center;
+    padding-top: 0;
+  }
+}
+
+.cover-wrapper img {
+  width: 100%;
+  border-radius: 25px;
+}
+
+.song-info {
+  margin-top: 15px;
+}
+
+.title {
+  font-size: 18px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  height: 26px;
+}
+
+.artist {
+  font-size: 14px;
+  height: 20px;
+  color: #ccc;
+  display: flex;
+  align-items: center;
+}
+
+.progress-bar {
+  display: flex;
+  align-items: center;
+  margin: 15px 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.time {
+  font-size: 12px;
+  width: 30px;
+  text-align: center;
+}
+
+.slider {
+  flex-grow: 1;
+  height: 4px;
+  background: #888;
+  border-radius: 10px;
+  margin: 0 10px;
+  position: relative;
+  cursor: pointer;
+}
+
+.progress {
+  height: 100%;
+  width: 0%;
+  background: white;
+  border-radius: 10px;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.progress-head {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  background: white;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.controls {
+  margin-top: 25px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  position: relative;
+}
+
+.controls button {
+  background: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+  border: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 48px;
+  height: 48px;
+}
+
+.controls img {
+  width: 90%;
+  height: 70%;
+}
+
+.play {
+  border-radius: 50%;
+  padding-left: 9px;
+  transition: padding-left 0.2s ease;
+}
+
+.play.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: default;
+}
+
+.play-btns-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: left;
+  gap: 30px;
+}
+
+.mode {
+  margin: auto;
+  margin-left: 0;
+}
+
+.tooltip {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: calc(100% + 30px);
+  background: rgba(0, 0, 0, 0.85);
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 15px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .5s ease, transform .5s ease;
+  white-space: nowrap;
+  z-index: 5;
+}
+
+.tooltip.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.cover-wrapper {
+  padding: 0 25px;
+}
+
+.content-wrapper {
+  padding: 0 10px;
+  position: relative;
+}

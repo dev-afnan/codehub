@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Music Player UI</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preload" as="image" href="https://www.dropbox.com/scl/fi/24ammpipe0el8h0mxdz0u/play.svg?rlkey=ykjyvto3op92euzv7h77joj4i&st=w021wojb&raw=1">
+  <link rel="preload" as="image" href="https://www.dropbox.com/scl/fi/ggix2d771gwbjqu6n0gjj/loop.svg?rlkey=lotbrgbzv3ujusonvj0u572mz&st=b89gni6k&raw=1">
+  <link rel="preload" as="image" href="https://www.dropbox.com/scl/fi/jx8k614i9lji0qs0f0jdl/shuffle.svg?rlkey=nkvx1rgkg10qb34brevg7owyx&st=ab1rulli&raw=1">
+</head>
+<body>
+  <div class="player-container">
+    <div class="cover-wrapper">
+      <img src="https://i.ibb.co/Q7X0t4mV/Epicurus.jpg" alt="Epicurus" class="cover-image" draggable="false" oncontextmenu="return false;">
+    </div>
+    <div class="content-wrapper">
+      <div class="song-info">
+        <div class="title">エピクロスの虹はもう見えない</div>
+        <div class="artist">SYNC.ART'S feat.Misato</div>
+      </div>
+      <div class="progress-bar">
+        <div class="time" id="current-time">00:00</div>
+        <div class="slider" id="progress-container">
+          <div class="progress" id="progress"></div>
+          <div class="progress-head" id="progress-head"></div>
+        </div>
+        <div class="time" id="duration">03:28</div>
+      </div>
+      <div class="controls">
+        <button class="mode" title="Mode: Playlist Loop">
+          <img id="mode-icon" src="https://www.dropbox.com/scl/fi/1ur7denkvmb5r4s70yr4c/Playlist Loop.svg?rlkey=zwk8rs5ylesc6brgnai8b8v67&st=xiri84zy&raw=1" alt="mode">
+        </button>
+        <div class="play-btns-wrapper">
+          <button class="prev">
+            <img src="https://www.dropbox.com/scl/fi/sgftzvwgbujwoitd67xhw/prev.svg?rlkey=izpqe8ezx2caympxrpj2ls5vn&st=v3udr0ou&raw=1" alt="prev" />
+          </button>
+          <button class="play">
+            <img src="https://www.dropbox.com/scl/fi/6k5hbmznf3so1xqs8xdy8/pause.svg?rlkey=ce82i9ln4hjncpzmui7yp2s8k&st=xaiih7m5&raw=1" alt="play" />
+          </button>
+          <button class="next">
+            <img src="https://www.dropbox.com/scl/fi/b9c2ioj2znhftxjvqx4wk/next.svg?rlkey=e1qb9p7on1rjay2vnvik757jy&st=0c9zjlaf&raw=1" alt="next" />
+          </button>
+        </div>
+      </div>
+      <div class="tooltip" id="mode-tooltip">Playlist Loop</div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
