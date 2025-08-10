@@ -9,6 +9,11 @@
       "has": [
         {
           "type": "missing"
+        },
+        {
+          "type": "header",
+          "key": "accept",
+          "value": ".*text/html.*"
         }
       ],
       "destination": "/maintenance"
