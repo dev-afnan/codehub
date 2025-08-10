@@ -1,7 +1,17 @@
 {
   "rewrites": [
-    { "source": "/", "destination": "/index.html" },
-    { "source": "/index.html", "destination": "/index.html" },
-    { "source": "/(.*)", "destination": "/maintenance.html" }
+    {
+      "source": "/maintenance",
+      "destination": "/maintenance.html"
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "missing"
+        }
+      ],
+      "destination": "/maintenance"
+    }
   ]
 }
