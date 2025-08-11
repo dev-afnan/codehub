@@ -1,23 +1,23 @@
 {
   "rewrites": [
     {
-      "source": "/projects/:path((?!.*\\..*).+)", 
+      "source": "/projects/:path((?!.*\\..*).+)",
       "destination": "/projects/:path/"
     },
     {
-      "source": "/contact-form", 
+      "source": "/contact-form",
       "destination": "/contact-form/"
     }
   ],
   "redirects": [
     {
-      "source": "/projects/:file*.:ext/(*)",  
-      "destination": "/projects/:file.:ext",     
+      "source": "/projects/:file+.:ext/",
+      "destination": "/projects/:file.:ext",
       "permanent": true
     },
     {
-      "source": "/contact-form/index.html/",  
-      "destination": "/contact-form/index.html",     
+      "source": "/contact-form/index.html/",
+      "destination": "/contact-form/index.html",
       "permanent": true
     }
   ]
