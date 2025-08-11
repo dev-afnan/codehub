@@ -1,24 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/projects/:path((?!.*\\..*).+)",
-      "destination": "/projects/:path/"
-    },
-    {
-      "source": "/contact-form",
-      "destination": "/contact-form/"
-    }
-  ],
-  "redirects": [
-    {
-      "source": "/projects/:file+.:ext/",
-      "destination": "/projects/:file.:ext",
-      "permanent": true
-    },
-    {
-      "source": "/contact-form/index.html/",
-      "destination": "/contact-form/index.html",
-      "permanent": true
+      "source": "/projects/music-player",
+      "destination": "/projects/music-player/"
     }
   ]
 }
