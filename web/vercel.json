@@ -1,8 +1,1 @@
-{
-  "rewrites": [
-    {
-      "source": "/projects/music-player",
-      "destination": "/projects/music-player/"
-    }
-  ]
-}
+
