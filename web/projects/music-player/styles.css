@@ -4,7 +4,7 @@ html {
 
 body {
   background: linear-gradient(to bottom, #3a4a6f, #1f2a47);
-  min-height: 100vh;
+  min-height: 100svh;
   margin: 0;
   box-sizing: border-box;
   font-family: sans-serif;
