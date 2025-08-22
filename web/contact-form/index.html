@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contact Form</title>
+<style>
+  body { font-family: sans-serif; max-width:700px; margin:auto; padding:20px; }
+  label, input, select, textarea, button { display:block; width:100%; margin-top:10px; }
+</style>
+</head>
+<body>
+<main>
+  <h2>Contact Me</h2>
+  <form id="contactForm">
+    <label>Name</label>
+    <input type="text" id="name" required>
+    
+    <label>Email</label>
+    <input type="email" id="email" required>
+    
+    <label>Topic</label>
+    <select id="topic" required>
+      <option value="question">Question</option>
+      <option value="feedback">Feedback</option>
+      <option value="suggestion">Suggestion</option>
+      <option value="other">Other</option>
+    </select>
+    
+    <label>Message</label>
+    <textarea id="message" rows="6" required></textarea>
+    
+    <button type="submit">Submit</button>
+  </form>
+</main>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyDxMO7-n_ZXp-axX4wBRV8hsVfRmI-aVcM",
+  authDomain: "afnanix-contact-form.firebaseapp.com",
+  projectId: "afnanix-contact-form",
+  storageBucket: "afnanix-contact-form.firebasestorage.app",
+  messagingSenderId: "994386258441",
+  appId: "1:994386258441:web:5e1b2b412a3778845da6d8",
+  measurementId: "G-1TNH5G7SE4"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// Generate random password
+function generatePassword(length=8) {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let pw = "";
+  for(let i=0;i<length;i++){ pw += chars.charAt(Math.floor(Math.random()*chars.length)); }
+  return pw;
+}
+
+// Handle form submission
+document.getElementById("contactForm").addEventListener("submit", async e=>{
+  e.preventDefault();
+
+  const name = document.getElementById("name").value;
+  const email = document.getElementById("email").value;
+  const topic = document.getElementById("topic").value;
+  const message = document.getElementById("message").value;
+
+  const password = generatePassword(8);
+  const convRef = doc(db, "conversations", crypto.randomUUID());
+
+  await setDoc(convRef, {
+    name, email, topic, password,
+    createdAt: serverTimestamp(),
+    messages: [{ sender:"user", text: message, timestamp: serverTimestamp() }]
+  });
+
+  const link = `${window.location.origin}/contact-form/response.html?id=${convRef.id}`;
+  document.querySelector("main").innerHTML = `
+    <h2>Thank you, ${name}!</h2>
+    <p>Your conversation has been created.</p>
+    <p><strong>Conversation link:</strong> <a href="${link}">${link}</a></p>
+    <p><strong>Password:</strong> ${password}</p>
+    <p>Please save this link and password to view your conversation.</p>
+  `;
+});
+</script>
+</body>
+</html>
