@@ -1,110 +1,92 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Contact Form</title>
-<style>
-  html, body { height: 100%; margin: 0; font-family: sans-serif; display:flex; flex-direction:column;}
-  main { flex:1; max-width:700px; margin:auto; padding:10px 20px; }
-  h2 { text-align:center; }
-  label { display:block; margin-top:15px; font-weight:bold; }
-  input, select, textarea { width:100%; padding:8px; margin-top:5px; box-sizing:border-box; }
-  button { margin-top:20px; padding:10px 15px; background:#00abff; color:white; font-weight:bold; border:none; border-radius:10px; cursor:pointer;}
-  #linkContainer { margin-top:20px; padding:10px; background:#f0f0f0; border-radius:6px; display:none; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact Form</title>
+  <style>
+    body { font-family: sans-serif; max-width: 700px; margin: auto; padding: 20px; }
+    form { display: flex; flex-direction: column; }
+    label { margin-top: 10px; }
+    input, textarea { padding: 8px; margin-top: 5px; }
+    button { margin-top: 15px; padding: 10px; cursor: pointer; }
+    #linkContainer { display: none; margin-top: 20px; }
+    a { color: blue; }
+  </style>
 </head>
 <body>
-<main>
-  <h2>Contact Me</h2>
+  <h2>Contact Form</h2>
   <form id="contactForm">
-    <label for="name">Your Name</label>
-    <input type="text" id="name" name="name" required>
-
-    <label for="email">Your Email</label>
-    <input type="email" id="email" name="email" required>
-
-    <label for="topic">Topic:</label>
-    <select id="topic" name="topic" required>
-      <option value="question">General Question❓</option>
-      <option value="feedback">Feedback ❤️</option>
-      <option value="suggestion">Suggestion ✨</option>
-      <option value="other">Other 🤔</option>
-    </select>
-
-    <label for="message">Your Message</label>
-    <textarea id="message" name="message" rows="6" required></textarea>
-
+    <label>Name: <input type="text" id="name" required></label>
+    <label>Email: <input type="email" id="email" required></label>
+    <label>Topic: <input type="text" id="topic" required></label>
+    <label>Message: <textarea id="message" required></textarea></label>
     <button type="submit">Submit</button>
   </form>
 
   <div id="linkContainer">
-    <p>The page where you can continue the conversation. Please save or bookmark this link:</p>
-    <a id="convLink" href="#" target="_blank"></a>
+    <p>Conversation created! Save this link to continue the chat:</p>
+    <a id="convLink" target="_blank"></a>
   </div>
-</main>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+    import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
-// Firebase config
-const firebaseConfig = {
-  apiKey: "AIzaSyDxMO7-n_ZXp-axX4wBRV8hsVfRmI-aVcM",
-  authDomain: "afnanix-contact-form.firebaseapp.com",
-  projectId: "afnanix-contact-form",
-  storageBucket: "afnanix-contact-form.firebasestorage.app",
-  messagingSenderId: "994386258441",
-  appId: "1:994386258441:web:5e1b2b412a3778845da6d8",
-  measurementId: "G-1TNH5G7SE4"
-};
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyDxMO7-n_ZXp-axX4wBRV8hsVfRmI-aVcM",
+      authDomain: "afnanix-contact-form.firebaseapp.com",
+      projectId: "afnanix-contact-form",
+      storageBucket: "afnanix-contact-form.firebasestorage.app",
+      messagingSenderId: "994386258441",
+      appId: "1:994386258441:web:5e1b2b412a3778845da6d8",
+      measurementId: "G-1TNH5G7SE4"
+    };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-const form = document.getElementById("contactForm");
-const linkContainer = document.getElementById("linkContainer");
-const convLink = document.getElementById("convLink");
+    const form = document.getElementById("contactForm");
+    const convLink = document.getElementById("convLink");
+    const linkContainer = document.getElementById("linkContainer");
 
-form.addEventListener("submit", async (e) => {
-  e.preventDefault();
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = document.getElementById("name").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const topic = document.getElementById("topic").value.trim();
+      const message = document.getElementById("message").value.trim();
 
-  const name = document.getElementById("name").value.trim();
-  const email = document.getElementById("email").value.trim();
-  const topic = document.getElementById("topic").value;
-  const message = document.getElementById("message").value.trim();
+      if (!name || !email || !topic || !message) return;
 
-  if (!name || !email || !topic || !message) return alert("Please fill in all fields.");
+      try {
+        // Generate unique conversation ID
+        const convId = crypto.randomUUID();
 
-  try {
-    // Generate a random UUID for the conversation ID
-    const convId = crypto.randomUUID();
+        // Create conversation document in Firestore
+        await setDoc(doc(db, "conversations", convId), {
+          name,
+          email,
+          topic,
+          messages: [
+            { sender: "user", text: message, timestamp: serverTimestamp() }
+          ],
+          createdAt: serverTimestamp()
+        });
 
-    // Save conversation in Firestore
-    await addDoc(collection(db, "conversations"), {
-      id: convId,
-      name,
-      email,
-      topic,
-      messages: [{ sender: "user", text: message, timestamp: serverTimestamp() }],
-      createdAt: serverTimestamp()
+        // Show conversation link
+        const url = `${window.location.origin}/contact-form/response.html?id=${convId}`;
+        convLink.href = url;
+        convLink.textContent = url;
+        linkContainer.style.display = "block";
+
+        form.reset();
+      } catch (err) {
+        console.error("Error creating conversation:", err);
+        alert("There was an error submitting your message. Please try again.");
+      }
     });
-
-    // Show the conversation link
-    const url = `${window.location.origin}/contact-form/response.html?id=${convId}`;
-    convLink.href = url;
-    convLink.textContent = url;
-    linkContainer.style.display = "block";
-
-    // Clear form
-    form.reset();
-
-  } catch (err) {
-    console.error("Error creating conversation:", err);
-    alert("There was an error submitting your message. Please try again.");
-  }
-});
-</script>
+  </script>
 </body>
-  </html>
+</html>
