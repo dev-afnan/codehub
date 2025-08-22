@@ -2,35 +2,76 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Conversation</title>
   <style>
-    body { font-family: sans-serif; max-width:700px; margin:auto; padding:20px; }
-    #messages { margin-top:20px; border:1px solid #ccc; padding:10px; border-radius:6px; max-height:400px; overflow-y:auto; }
-    .message { margin-bottom:10px; }
-    .message.user { color: #333; }
-    .message.admin { color: #007bff; font-weight:bold; }
-    #msgForm { margin-top:20px; display:flex; flex-direction:column; }
-    textarea { margin-bottom:10px; padding:8px; }
-    button { padding:10px; cursor:pointer; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f9f9f9;
+    }
+    #messages {
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background: #fff;
+      padding: 10px;
+      max-width: 600px;
+      height: 400px;
+      overflow-y: auto;
+      margin-bottom: 20px;
+    }
+    .message {
+      margin: 8px 0;
+      padding: 6px 10px;
+      border-radius: 5px;
+      max-width: 75%;
+    }
+    .user {
+      background: #e1f5fe;
+      align-self: flex-start;
+    }
+    .admin {
+      background: #c8e6c9;
+      align-self: flex-end;
+      margin-left: auto;
+    }
+    form {
+      display: flex;
+      gap: 10px;
+    }
+    input[type="text"] {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      padding: 8px 16px;
+      background: #007bff;
+      border: none;
+      border-radius: 5px;
+      color: #fff;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
   </style>
 </head>
 <body>
   <h2>Conversation</h2>
+  <div id="messages"></div>
 
-  <div id="conversationArea">
-    <div id="messages"></div>
-    <form id="msgForm">
-      <textarea id="newMsg" rows="4" placeholder="Type your message..." required></textarea>
-      <button type="submit">Send</button>
-    </form>
-  </div>
+  <form id="replyForm">
+    <input type="text" id="replyMessage" placeholder="Type your reply..." required>
+    <button type="submit">Send</button>
+  </form>
 
+  <!-- Firebase SDKs -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-    import { getFirestore, doc, updateDoc, arrayUnion, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, updateDoc, arrayUnion, onSnapshot } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
-    // Firebase config
+    // Firebase config (your project details)
     const firebaseConfig = {
       apiKey: "AIzaSyDxMO7-n_ZXp-axX4wBRV8hsVfRmI-aVcM",
       authDomain: "afnanix-contact-form.firebaseapp.com",
@@ -44,60 +85,60 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Get conversation ID from URL
+    // Grab conversation ID from URL
     const urlParams = new URLSearchParams(window.location.search);
     const convId = urlParams.get("id");
 
     if (!convId) {
-      alert("Invalid conversation link.");
-      throw new Error("No conversation ID in URL");
+      alert("No conversation ID provided in URL.");
+      throw new Error("Missing conversation ID.");
     }
 
-    const convRef = doc(db, "conversations", convId);
-
     const messagesDiv = document.getElementById("messages");
-    const msgForm = document.getElementById("msgForm");
-    const newMsg = document.getElementById("newMsg");
 
-    // Real-time listener for conversation
+    // Render a single message
+    function renderMessage(msg) {
+      const div = document.createElement("div");
+      div.classList.add("message", msg.sender);
+      div.textContent = `${msg.sender}: ${msg.text}`;
+      messagesDiv.appendChild(div);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    // Live updates from Firestore
+    const convRef = doc(db, "conversations", convId);
     onSnapshot(convRef, (snapshot) => {
-      if (!snapshot.exists()) {
-        messagesDiv.innerHTML = "<p>Conversation not found.</p>";
-        return;
-      }
-      const data = snapshot.data();
-      messagesDiv.innerHTML = "";
-      if (data.messages) {
-        data.messages.forEach(msg => {
-          const div = document.createElement("div");
-          div.className = "message " + (msg.sender === "user" ? "user" : "admin");
-          div.textContent = msg.sender + ": " + msg.text;
-          messagesDiv.appendChild(div);
-        });
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      if (snapshot.exists()) {
+        messagesDiv.innerHTML = ""; // clear first
+        const data = snapshot.data();
+        if (data.messages && data.messages.length > 0) {
+          data.messages.forEach((msg) => renderMessage(msg));
+        }
+      } else {
+        alert("Conversation not found.");
       }
     });
 
-    // Send message
-    msgForm.addEventListener("submit", async (e) => {
+    // Handle sending replies
+    document.getElementById("replyForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const text = newMsg.value.trim();
+      const text = document.getElementById("replyMessage").value.trim();
       if (!text) return;
 
       try {
-        await updateDoc(doc(db, "conversations", convId), {
-  messages: arrayUnion({
-    sender,
-    text,
-    timestamp: new Date().toISOString()  // ✅ allowed
-  })
-});
-        newMsg.value = "";
+        await updateDoc(convRef, {
+          messages: arrayUnion({
+            sender: "admin",  // fixed sender
+            text,
+            timestamp: new Date().toISOString()
+          })
+        });
+        document.getElementById("replyMessage").value = "";
       } catch (err) {
         console.error("Error sending message:", err);
-        alert("Failed to send message. Please try again.");
+        alert("Error sending message.");
       }
     });
   </script>
 </body>
-</html>
+  </html>
