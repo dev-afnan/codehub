@@ -59,6 +59,9 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
+// Replace this with your actual admin UID from Firebase Authentication
+const ADMIN_UID = "ph5bDK8VzAOJzqaQxrEje2Z5eK13";
+
 let currentConvRef = null;
 
 // Render a message
@@ -144,7 +147,12 @@ async function loadConversations() {
 document.getElementById("googleLoginBtn").addEventListener("click", async () => {
   try {
     const result = await signInWithPopup(auth, provider);
-    console.log("Signed in as:", result.user.email);
+    console.log("Signed-in user UID:", result.user.uid);
+    if (result.user.uid !== ADMIN_UID) {
+      alert("Access denied. This account is not an admin.");
+      await signOut(auth);
+      return;
+    }
     document.getElementById("loginPrompt").style.display = "none";
     await loadConversations();
   } catch (err) {
@@ -156,18 +164,16 @@ document.getElementById("googleLoginBtn").addEventListener("click", async () => 
 // Handle already signed-in users
 onAuthStateChanged(auth, async (user) => {
   if (user) {
+    console.log("Signed-in user UID:", user.uid);
+    if (user.uid !== ADMIN_UID) {
+      alert("Access denied. This account is not an admin.");
+      await signOut(auth);
+      return;
+    }
     document.getElementById("loginPrompt").style.display = "none";
-
-    // --- TEMPORARY DEBUG ---
-    alert("Signed-in user email:", user.email); // Normal email
-    const tokenResult = await user.getIdTokenResult();
-    alert("Token email (from Firebase token):", tokenResult.claims.email);
-    alert("All token claims:", tokenResult.claims);
-    // ------------------------
-
     await loadConversations();
   }
 });
 </script>
 </body>
-</html>
+  </html>
