@@ -5,33 +5,44 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Contact Form</title>
 <style>
-body { font-family:sans-serif; max-width:700px; margin:auto; padding:20px; }
-form { display:flex; flex-direction:column; }
-label { margin-top:10px; }
-input, textarea { padding:8px; margin-top:5px; }
-button { margin-top:15px; padding:10px; cursor:pointer; }
-#linkContainer { display:none; margin-top:20px; }
-a { color:blue; }
+html, body { height:100%; margin:0; font-family:sans-serif; display:flex; flex-direction:column; }
+main { flex:1; max-width:700px; width:100%; margin:auto; padding:10px 20px; box-sizing:border-box; }
+h2 { text-align:center; }
+label { display:block; margin-top:15px; font-weight:bold; }
+input, select, textarea { width:100%; padding:8px; margin-top:5px; box-sizing:border-box; font-family:sans-serif; }
+button { margin-top:20px; padding:10px 15px; font-weight:bold; background-color:#00abff; color:white; border:none; border-radius:10px; cursor:pointer; }
+button:hover { background-color:#007acc; }
 </style>
 </head>
 <body>
-<h2>Contact Form</h2>
+<main>
+<h2>Contact Me</h2>
 <form id="contactForm">
-  <label>Name: <input type="text" id="name" required></label>
-  <label>Email: <input type="email" id="email" required></label>
-  <label>Topic: <input type="text" id="topic" required></label>
-  <label>Message: <textarea id="message" required></textarea></label>
+  <label for="name">Your Name</label>
+  <input type="text" id="name" name="name" required>
+
+  <label for="email">Your Email</label>
+  <input type="email" id="email" name="email" required>
+
+  <label for="topic">Topic:</label>
+  <select id="topic" name="topic" required>
+    <option value="question">General Question❓</option>
+    <option value="feedback">Feedback ❤️</option>
+    <option value="suggestion">Suggestion ✨</option>
+    <option value="other">Other 🤔</option>
+  </select>
+
+  <label for="message">Your Message</label>
+  <textarea id="message" name="message" rows="6" required></textarea>
+
   <button type="submit">Submit</button>
 </form>
-
-<div id="linkContainer">
-  <p>Conversation created! Save this link:</p>
-  <a id="convLink" target="_blank"></a>
-</div>
+</main>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
 // Firebase config
 const firebaseConfig = {
@@ -44,39 +55,60 @@ const firebaseConfig = {
   measurementId: "G-1TNH5G7SE4"
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
 
+// Automatically sign in anonymously if not already
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    signInAnonymously(auth)
+      .then(() => console.log("Signed in anonymously"))
+      .catch((err) => console.error("Anonymous sign-in error:", err));
+  }
+});
+
+// Handle form submission
 const form = document.getElementById("contactForm");
-const linkContainer = document.getElementById("linkContainer");
-const convLink = document.getElementById("convLink");
-
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
+
+  const user = auth.currentUser;
+  if (!user) {
+    alert("Please wait, signing you in...");
+    return;
+  }
+
   const name = document.getElementById("name").value.trim();
   const email = document.getElementById("email").value.trim();
-  const topic = document.getElementById("topic").value.trim();
+  const topic = document.getElementById("topic").value;
   const message = document.getElementById("message").value.trim();
-  if (!name || !email || !topic || !message) return;
+
+  if (!name || !email || !message) {
+    alert("Please fill all required fields.");
+    return;
+  }
 
   try {
-    const convId = crypto.randomUUID();
-    await setDoc(doc(db, "conversations", convId), {
+    const convDoc = await addDoc(collection(db, "conversations"), {
       name,
       email,
       topic,
-      createdAt: serverTimestamp(),
-      messages: [{ sender: "user", text: message, timestamp: new Date().toISOString() }]
+      messages: [
+        { sender: "user", text: message, timestamp: serverTimestamp() }
+      ],
+      createdAt: serverTimestamp()
     });
 
-    const url = `${window.location.origin}/contact-form/response.html?id=${convId}`;
-    convLink.href = url;
-    convLink.textContent = url;
-    linkContainer.style.display = "block";
+    const link = `${window.location.origin}/contact-form/response.html?id=${convDoc.id}`;
+    alert(`Your message was submitted!\nPlease save or bookmark this link to see replies:\n${link}`);
+
     form.reset();
+
   } catch (err) {
     console.error("Error creating conversation:", err);
-    alert("Error submitting your message.");
+    alert("Error submitting message. Please try again.");
   }
 });
 </script>
