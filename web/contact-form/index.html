@@ -66,14 +66,14 @@
 
         // Create conversation document in Firestore
         await setDoc(doc(db, "conversations", convId), {
-          name,
-          email,
-          topic,
-          messages: [
-            { sender: "user", text: message, timestamp: serverTimestamp() }
-          ],
-          createdAt: serverTimestamp()
-        });
+  name,
+  email,
+  topic,
+  createdAt: serverTimestamp(), // allowed
+  messages: [
+    { sender: "user", text: message, timestamp: new Date().toISOString() } // safe
+  ]
+});
 
         // Show conversation link
         const url = `${window.location.origin}/contact-form/response.html?id=${convId}`;
