@@ -157,6 +157,14 @@ document.getElementById("googleLoginBtn").addEventListener("click", async () => 
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     document.getElementById("loginPrompt").style.display = "none";
+
+    // --- TEMPORARY DEBUG ---
+    console.log("Signed-in user email:", user.email); // Normal email
+    const tokenResult = await user.getIdTokenResult();
+    console.log("Token email (from Firebase token):", tokenResult.claims.email);
+    console.log("All token claims:", tokenResult.claims);
+    // ------------------------
+
     await loadConversations();
   }
 });
