@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Conversation</title>
 <style>
-body { font-family:sans-serif; max-width:700px; margin:auto; padding:20px; }
-#messages { border:1px solid #ccc; border-radius:5px; background:#fff; padding:10px; height:400px; overflow-y:auto; margin-bottom:20px; display:flex; flex-direction:column; }
+body { font-family: sans-serif; max-width:700px; margin:auto; padding:20px; }
+h2 { text-align:center; }
+#messages { border:1px solid #ccc; border-radius:5px; padding:10px; height:400px; overflow-y:auto; display:flex; flex-direction:column; margin-bottom:20px; }
 .message { margin:5px 0; padding:6px 10px; border-radius:5px; max-width:75%; }
 .user { background:#e1f5fe; align-self:flex-start; }
 .admin { background:#c8e6c9; align-self:flex-end; margin-left:auto; }
@@ -17,8 +18,9 @@ button:hover { background:#0056b3; }
 </style>
 </head>
 <body>
-<h2>Conversation</h2>
-<div id="messages"></div>
+<h2>Your Conversation</h2>
+
+<div id="messages">Loading conversation...</div>
 
 <form id="replyForm">
   <input type="text" id="replyMessage" placeholder="Type your message..." required>
@@ -27,8 +29,10 @@ button:hover { background:#0056b3; }
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-import { getFirestore, doc, updateDoc, arrayUnion, onSnapshot } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, updateDoc, arrayUnion, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyDxMO7-n_ZXp-axX4wBRV8hsVfRmI-aVcM",
   authDomain: "afnanix-contact-form.firebaseapp.com",
@@ -41,9 +45,21 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
 
+// Sign in anonymously if needed
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    signInAnonymously(auth)
+      .then(() => console.log("Signed in anonymously"))
+      .catch((err) => console.error("Anonymous sign-in error:", err));
+  }
+});
+
+// Get conversation ID from URL
 const urlParams = new URLSearchParams(window.location.search);
 const convId = urlParams.get("id");
+
 if (!convId) {
   alert("Invalid conversation link.");
   throw new Error("No conversation ID in URL");
@@ -51,9 +67,8 @@ if (!convId) {
 
 const convRef = doc(db, "conversations", convId);
 const messagesDiv = document.getElementById("messages");
-const replyForm = document.getElementById("replyForm");
-const replyInput = document.getElementById("replyMessage");
 
+// Function to render a message
 function renderMessage(msg) {
   const div = document.createElement("div");
   div.className = "message " + msg.sender;
@@ -62,23 +77,23 @@ function renderMessage(msg) {
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
-// Live updates
-onSnapshot(convRef, (snapshot) => {
-  if (snapshot.exists()) {
-    messagesDiv.innerHTML = "";
-    const data = snapshot.data();
-    if (data.messages && data.messages.length) {
-      data.messages.forEach(msg => renderMessage(msg));
-    }
-  } else {
+// Real-time listener for the conversation
+onSnapshot(convRef, (snap) => {
+  if (!snap.exists()) {
     messagesDiv.innerHTML = "<p>Conversation not found.</p>";
+    return;
+  }
+  const data = snap.data();
+  messagesDiv.innerHTML = "";
+  if (data.messages && data.messages.length) {
+    data.messages.forEach(renderMessage);
   }
 });
 
-// Send reply
-replyForm.addEventListener("submit", async (e) => {
+// Handle sending a new user message
+document.getElementById("replyForm").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const text = replyInput.value.trim();
+  const text = document.getElementById("replyMessage").value.trim();
   if (!text) return;
 
   try {
@@ -86,13 +101,13 @@ replyForm.addEventListener("submit", async (e) => {
       messages: arrayUnion({
         sender: "user",
         text,
-        timestamp: new Date().toISOString()
+        timestamp: serverTimestamp()
       })
     });
-    replyInput.value = "";
+    document.getElementById("replyMessage").value = "";
   } catch (err) {
     console.error("Error sending message:", err);
-    alert("Error sending message.");
+    alert("Error sending message. Make sure you are signed in.");
   }
 });
 </script>
