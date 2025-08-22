@@ -85,9 +85,13 @@
       if (!text) return;
 
       try {
-        await updateDoc(convRef, {
-          messages: arrayUnion({ sender: "user", text, timestamp: serverTimestamp() })
-        });
+        await updateDoc(doc(db, "conversations", convId), {
+  messages: arrayUnion({
+    sender,
+    text,
+    timestamp: new Date().toISOString()  // ✅ allowed
+  })
+});
         newMsg.value = "";
       } catch (err) {
         console.error("Error sending message:", err);
