@@ -40,8 +40,8 @@ button:hover { background:#0056b3; }
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-import { getFirestore, collection, getDocs, doc, onSnapshot, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
 // Firebase config
 const firebaseConfig = {
@@ -57,121 +57,50 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
 
-// Replace this with your actual admin UID from Firebase Authentication
-const ADMIN_UID = "ph5bDK8VzAOJzqaQxrEje2Z5eK13";
+// Sign in anonymously if not already signed in
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    signInAnonymously(auth)
+      .then(() => console.log("Signed in anonymously"))
+      .catch((err) => console.error("Anonymous sign-in error:", err));
+  }
+});
 
-let currentConvRef = null;
-
-// Render a message
-function renderMessage(msg, container) {
-  const div = document.createElement("div");
-  div.className = "message " + msg.sender;
-  div.textContent = `${msg.sender}: ${msg.text}`;
-  container.appendChild(div);
-  container.scrollTop = container.scrollHeight;
-}
-
-// Show conversation
-function showConversation(convId) {
-  currentConvRef = doc(db, "conversations", convId);
-  document.getElementById("conversationArea").style.display = "block";
-  const messagesDiv = document.getElementById("messages");
-  messagesDiv.innerHTML = "";
-
-  onSnapshot(currentConvRef, (snap) => {
-    if (snap.exists()) {
-      messagesDiv.innerHTML = "";
-      const data = snap.data();
-      if (data.messages && data.messages.length) {
-        data.messages.forEach(msg => renderMessage(msg, messagesDiv));
-      }
-    } else {
-      messagesDiv.innerHTML = "<p>Conversation not found.</p>";
-    }
-  });
-}
-
-// Send admin reply
-document.getElementById("replyForm").addEventListener("submit", async (e) => {
+// Handle form submission
+document.querySelector("form").addEventListener("submit", async (e) => {
   e.preventDefault();
-  if (!currentConvRef) return;
-  const text = document.getElementById("replyMessage").value.trim();
-  if (!text) return;
+
+  const name = document.getElementById("name").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const topic = document.getElementById("topic").value;
+  const message = document.getElementById("message").value.trim();
+
+  if (!name || !email || !message) {
+    alert("Please fill all required fields.");
+    return;
+  }
 
   try {
-    await updateDoc(currentConvRef, {
-      messages: arrayUnion({
-        sender: "admin",
-        text,
-        timestamp: new Date().toISOString()
-      })
+    const convDoc = await addDoc(collection(db, "conversations"), {
+      name,
+      email,
+      topic,
+      messages: [
+        { sender: "user", text: message, timestamp: serverTimestamp() }
+      ],
+      createdAt: serverTimestamp()
     });
-    document.getElementById("replyMessage").value = "";
-  } catch (err) {
-    console.error("Error sending admin message:", err);
-    alert("Access denied or Firestore rules prevent this action.");
-  }
-});
 
-// Load all conversations
-async function loadConversations() {
-  const convList = document.getElementById("conversationList");
-  convList.style.display = "block";
-  convList.innerHTML = "";
-  try {
-    const snapshot = await getDocs(collection(db, "conversations"));
-    if (snapshot.empty) {
-      convList.innerHTML = "<p>No conversations yet.</p>";
-    } else {
-      snapshot.forEach(docSnap => {
-        const data = docSnap.data();
-        const div = document.createElement("div");
-        div.className = "conversation";
-        div.textContent = `${data.name} (${data.topic})`;
-        div.addEventListener("click", () => showConversation(docSnap.id));
-        convList.appendChild(div);
-      });
-    }
-  } catch (err) {
-    console.error("Firestore access denied:", err);
-    alert("Access denied. Your account is not allowed to access admin panel.");
-    await signOut(auth);
-    document.getElementById("loginPrompt").style.display = "block";
-    convList.style.display = "none";
-  }
-}
+    const link = `${window.location.origin}/contact-form/response.html?id=${convDoc.id}`;
+    alert(`Your message was submitted! Please save or bookmark this link to see replies:\n${link}`);
 
-// Google login button
-document.getElementById("googleLoginBtn").addEventListener("click", async () => {
-  try {
-    const result = await signInWithPopup(auth, provider);
-    console.log("Signed-in user UID:", result.user.uid);
-    if (result.user.uid !== ADMIN_UID) {
-      alert("Access denied. This account is not an admin.");
-      await signOut(auth);
-      return;
-    }
-    document.getElementById("loginPrompt").style.display = "none";
-    await loadConversations();
-  } catch (err) {
-    console.error("Login error:", err);
-    alert("Login failed. Please try again.");
-  }
-});
+    // Clear form
+    e.target.reset();
 
-// Handle already signed-in users
-onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    console.log("Signed-in user UID:", user.uid);
-    if (user.uid !== ADMIN_UID) {
-      alert("Access denied. This account is not an admin.");
-      await signOut(auth);
-      return;
-    }
-    document.getElementById("loginPrompt").style.display = "none";
-    await loadConversations();
+  } catch (err) {
+    console.error("Error creating conversation:", err);
+    alert("There was an error submitting your message. Please try again.");
   }
 });
 </script>
