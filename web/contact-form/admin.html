@@ -8,7 +8,7 @@
 body { font-family:sans-serif; max-width:800px; margin:auto; padding:20px; }
 h2 { text-align:center; }
 #loginPrompt { text-align:center; margin-top:20px; }
-#conversationList { margin-top:20px; }
+#conversationList { margin-top:20px; display:none; }
 .conversation { border:1px solid #ccc; border-radius:5px; padding:10px; margin-bottom:10px; cursor:pointer; }
 #messages { border:1px solid #ccc; border-radius:5px; padding:10px; height:400px; overflow-y:auto; margin-bottom:20px; display:flex; flex-direction:column; }
 .message { margin:5px 0; padding:6px 10px; border-radius:5px; max-width:75%; }
@@ -27,7 +27,8 @@ button:hover { background:#0056b3; }
   <button id="googleLoginBtn">Sign in with Google</button>
 </div>
 
-<div id="conversationList" style="display:none;"><p>Loading conversations...</p></div>
+<div id="conversationList"></div>
+
 <div id="conversationArea" style="display:none;">
   <h3>Conversation</h3>
   <div id="messages"></div>
@@ -60,7 +61,7 @@ const provider = new GoogleAuthProvider();
 
 let currentConvRef = null;
 
-// Render messages
+// Render a message
 function renderMessage(msg, container) {
   const div = document.createElement("div");
   div.className = "message " + msg.sender;
@@ -107,7 +108,7 @@ document.getElementById("replyForm").addEventListener("submit", async (e) => {
     document.getElementById("replyMessage").value = "";
   } catch (err) {
     console.error("Error sending admin message:", err);
-    alert("Error sending message. Check Firestore rules.");
+    alert("Access denied or Firestore rules prevent this action.");
   }
 });
 
@@ -116,22 +117,30 @@ async function loadConversations() {
   const convList = document.getElementById("conversationList");
   convList.style.display = "block";
   convList.innerHTML = "";
-  const snapshot = await getDocs(collection(db, "conversations"));
-  if (snapshot.empty) {
-    convList.innerHTML = "<p>No conversations yet.</p>";
-  } else {
-    snapshot.forEach(docSnap => {
-      const data = docSnap.data();
-      const div = document.createElement("div");
-      div.className = "conversation";
-      div.textContent = `${data.name} (${data.topic})`;
-      div.addEventListener("click", () => showConversation(docSnap.id));
-      convList.appendChild(div);
-    });
+  try {
+    const snapshot = await getDocs(collection(db, "conversations"));
+    if (snapshot.empty) {
+      convList.innerHTML = "<p>No conversations yet.</p>";
+    } else {
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        const div = document.createElement("div");
+        div.className = "conversation";
+        div.textContent = `${data.name} (${data.topic})`;
+        div.addEventListener("click", () => showConversation(docSnap.id));
+        convList.appendChild(div);
+      });
+    }
+  } catch (err) {
+    console.error("Firestore access denied:", err);
+    alert("Access denied. Your account is not allowed to access admin panel.");
+    await signOut(auth);
+    document.getElementById("loginPrompt").style.display = "block";
+    convList.style.display = "none";
   }
 }
 
-// Handle login button
+// Google login button
 document.getElementById("googleLoginBtn").addEventListener("click", async () => {
   try {
     const result = await signInWithPopup(auth, provider);
@@ -144,18 +153,11 @@ document.getElementById("googleLoginBtn").addEventListener("click", async () => 
   }
 });
 
-// Hide login prompt if already signed in
+// Handle already signed-in users
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     document.getElementById("loginPrompt").style.display = "none";
-    try {
-      await loadConversations();
-    } catch (err) {
-      console.error("Firestore access denied:", err);
-      alert("Access denied. Your account is not allowed.");
-      await signOut(auth);
-      document.getElementById("loginPrompt").style.display = "block";
-    }
+    await loadConversations();
   }
 });
 </script>
