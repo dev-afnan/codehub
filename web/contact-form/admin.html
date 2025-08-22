@@ -5,25 +5,38 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin Panel</title>
 <style>
-  body { font-family:sans-serif; max-width:900px; margin:auto; padding:20px; }
-  .conversation {border:1px solid #ccc; padding:10px; margin:10px 0;}
-  input {width:70%; margin-right:5px;}
-  button {padding:5px 10px;}
+body { font-family:sans-serif; max-width:800px; margin:auto; padding:20px; }
+h2 { text-align:center; }
+#conversationList { margin-top:20px; }
+.conversation { border:1px solid #ccc; border-radius:5px; padding:10px; margin-bottom:10px; cursor:pointer; }
+#messages { border:1px solid #ccc; border-radius:5px; padding:10px; height:400px; overflow-y:auto; margin-bottom:20px; display:flex; flex-direction:column; }
+.message { margin:5px 0; padding:6px 10px; border-radius:5px; max-width:75%; }
+.user { background:#e1f5fe; align-self:flex-start; }
+.admin { background:#c8e6c9; align-self:flex-end; margin-left:auto; }
+form { display:flex; gap:10px; }
+input[type=text] { flex:1; padding:8px; border:1px solid #ccc; border-radius:5px; }
+button { padding:8px 16px; cursor:pointer; background:#007bff; border:none; color:#fff; border-radius:5px; }
+button:hover { background:#0056b3; }
 </style>
 </head>
 <body>
 <h2>Admin Panel</h2>
-<div id="auth">
-  <button id="loginBtn">Login as Admin</button>
+<div id="conversationList"><p>Loading conversations...</p></div>
+<div id="conversationArea" style="display:none;">
+  <h3>Conversation</h3>
+  <div id="messages"></div>
+  <form id="replyForm">
+    <input type="text" id="replyMessage" placeholder="Type your reply..." required>
+    <button type="submit">Send</button>
+  </form>
 </div>
-<div id="conversations"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-import { getFirestore, collection, onSnapshot, doc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+import { getFirestore, collection, getDocs, doc, onSnapshot, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
-// --- Firebase config ---
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyDxMO7-n_ZXp-axX4wBRV8hsVfRmI-aVcM",
   authDomain: "afnanix-contact-form.firebaseapp.com",
@@ -34,69 +47,100 @@ const firebaseConfig = {
   measurementId: "G-1TNH5G7SE4"
 };
 
-// --- Initialize Firebase ---
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-const authDiv = document.getElementById("auth");
-const convDiv = document.getElementById("conversations");
+// Only allow these admin emails
+const ALLOWED_ADMINS = ["youremail@gmail.com"];
 
-// --- Google login button ---
-document.getElementById("loginBtn").onclick = () => signInWithPopup(auth, provider);
+let currentConvRef = null;
 
-// --- Listen for auth state changes ---
-onAuthStateChanged(auth, user => {
-  if(user){
-    authDiv.innerHTML = `Logged in as ${user.displayName} <button id="logoutBtn">Logout</button>`;
-    document.getElementById("logoutBtn").onclick = () => signOut(auth);
-    loadConversations();
-  } else {
-    authDiv.innerHTML = `<button id="loginBtn">Login as Admin</button>`;
-    convDiv.innerHTML = "";
-    document.getElementById("loginBtn").onclick = () => signInWithPopup(auth, provider);
+function renderMessage(msg, container) {
+  const div = document.createElement("div");
+  div.className = "message " + msg.sender;
+  div.textContent = `${msg.sender}: ${msg.text}`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function showConversation(convId) {
+  currentConvRef = doc(db, "conversations", convId);
+  document.getElementById("conversationArea").style.display = "block";
+  const messagesDiv = document.getElementById("messages");
+  messagesDiv.innerHTML = "";
+
+  // live updates
+  onSnapshot(currentConvRef, (snap) => {
+    if (snap.exists()) {
+      messagesDiv.innerHTML = "";
+      const data = snap.data();
+      if (data.messages && data.messages.length) {
+        data.messages.forEach(msg => renderMessage(msg, messagesDiv));
+      }
+    } else {
+      messagesDiv.innerHTML = "<p>Conversation not found.</p>";
+    }
+  });
+}
+
+// Listen for replies
+document.getElementById("replyForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!currentConvRef) return;
+  const text = document.getElementById("replyMessage").value.trim();
+  if (!text) return;
+
+  try {
+    await updateDoc(currentConvRef, {
+      messages: arrayUnion({
+        sender: "admin",
+        text,
+        timestamp: new Date().toISOString()
+      })
+    });
+    document.getElementById("replyMessage").value = "";
+  } catch (err) {
+    console.error("Error sending admin message:", err);
+    alert("Error sending message.");
   }
 });
 
-// --- Load all conversations in real-time ---
-function loadConversations(){
-  const convCol = collection(db,"conversations");
-  onSnapshot(convCol, snap=>{
-    convDiv.innerHTML="";
-    snap.forEach(docSnap=>{
-      const data = docSnap.data();
-      const div = document.createElement("div");
-      div.className="conversation";
-      div.innerHTML = `<b>${data.name}</b> (${data.email}) - Topic: ${data.topic}<br>`;
+// Check auth
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    if (!ALLOWED_ADMINS.includes(user.email)) {
+      alert("Access denied. You are not an admin.");
+      window.location.href = "/"; // redirect non-admins
+      return;
+    }
 
-      // Display messages
-      data.messages.forEach(m=>{
-        const p = document.createElement("p");
-        p.textContent = `${m.sender}: ${m.text}`;
-        div.appendChild(p);
+    // Load all conversations
+    const convList = document.getElementById("conversationList");
+    convList.innerHTML = "";
+    const snapshot = await getDocs(collection(db, "conversations"));
+    if (snapshot.empty) {
+      convList.innerHTML = "<p>No conversations yet.</p>";
+    } else {
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        const div = document.createElement("div");
+        div.className = "conversation";
+        div.textContent = `${data.name} (${data.topic})`;
+        div.addEventListener("click", () => showConversation(docSnap.id));
+        convList.appendChild(div);
       });
+    }
 
-      // Admin reply input
-      const input = document.createElement("input");
-      input.placeholder="Reply...";
-      const btn = document.createElement("button");
-      btn.textContent="Send";
-      btn.onclick = async ()=>{
-        const text = input.value.trim();
-        if(!text) return;
-        await updateDoc(doc(db,"conversations",docSnap.id),{
-          messages: arrayUnion({ sender:"admin", text, timestamp:new Date() })
-        });
-        input.value="";
-      };
-
-      div.appendChild(input);
-      div.appendChild(btn);
-      convDiv.appendChild(div);
+  } else {
+    // prompt login
+    signInWithPopup(auth, provider).catch(err => {
+      console.error(err);
+      alert("Login failed");
     });
-  });
-}
+  }
+});
 </script>
 </body>
-</html>
+  </html>
