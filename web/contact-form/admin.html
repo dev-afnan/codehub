@@ -7,6 +7,7 @@
 <style>
 body { font-family:sans-serif; max-width:800px; margin:auto; padding:20px; }
 h2 { text-align:center; }
+#loginPrompt { text-align:center; margin-top:20px; }
 #conversationList { margin-top:20px; }
 .conversation { border:1px solid #ccc; border-radius:5px; padding:10px; margin-bottom:10px; cursor:pointer; }
 #messages { border:1px solid #ccc; border-radius:5px; padding:10px; height:400px; overflow-y:auto; margin-bottom:20px; display:flex; flex-direction:column; }
@@ -21,7 +22,12 @@ button:hover { background:#0056b3; }
 </head>
 <body>
 <h2>Admin Panel</h2>
-<div id="conversationList"><p>Loading conversations...</p></div>
+
+<div id="loginPrompt">
+  <button id="googleLoginBtn">Sign in with Google</button>
+</div>
+
+<div id="conversationList" style="display:none;"><p>Loading conversations...</p></div>
 <div id="conversationArea" style="display:none;">
   <h3>Conversation</h3>
   <div id="messages"></div>
@@ -101,13 +107,14 @@ document.getElementById("replyForm").addEventListener("submit", async (e) => {
     document.getElementById("replyMessage").value = "";
   } catch (err) {
     console.error("Error sending admin message:", err);
-    alert("Error sending message. (Check Firestore rules for allowed emails)");
+    alert("Error sending message. Check Firestore rules.");
   }
 });
 
 // Load all conversations
 async function loadConversations() {
   const convList = document.getElementById("conversationList");
+  convList.style.display = "block";
   convList.innerHTML = "";
   const snapshot = await getDocs(collection(db, "conversations"));
   if (snapshot.empty) {
@@ -124,23 +131,31 @@ async function loadConversations() {
   }
 }
 
-// Auth check and admin access
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    // Not signed in → show login popup
-    signInWithPopup(auth, provider).catch(err => console.error(err));
-    return;
-  }
-
-  console.log("Signed-in email:", user.email); // For debugging Firestore rule match
-
-  // Try loading conversations; if Firestore rules deny access, it will fail
+// Handle login button
+document.getElementById("googleLoginBtn").addEventListener("click", async () => {
   try {
+    const result = await signInWithPopup(auth, provider);
+    console.log("Signed in as:", result.user.email);
+    document.getElementById("loginPrompt").style.display = "none";
     await loadConversations();
   } catch (err) {
-    console.error("Firestore access denied:", err);
-    alert("Access denied. Your account is not allowed to access admin panel.");
-    await signOut(auth);
+    console.error("Login error:", err);
+    alert("Login failed. Please try again.");
+  }
+});
+
+// Hide login prompt if already signed in
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    document.getElementById("loginPrompt").style.display = "none";
+    try {
+      await loadConversations();
+    } catch (err) {
+      console.error("Firestore access denied:", err);
+      alert("Access denied. Your account is not allowed.");
+      await signOut(auth);
+      document.getElementById("loginPrompt").style.display = "block";
+    }
   }
 });
 </script>
