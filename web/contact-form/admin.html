@@ -34,7 +34,7 @@ button:hover { background:#0056b3; }
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
 import { getFirestore, collection, getDocs, doc, onSnapshot, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
 // Firebase config
 const firebaseConfig = {
@@ -52,7 +52,7 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-// Only allow these verified admin emails
+// Admin emails (lowercase)
 const ALLOWED_ADMINS = ["youremail@gmail.com"];
 
 let currentConvRef = null;
@@ -66,7 +66,7 @@ function renderMessage(msg, container) {
   container.scrollTop = container.scrollHeight;
 }
 
-// Show a selected conversation
+// Show conversation
 function showConversation(convId) {
   currentConvRef = doc(db, "conversations", convId);
   document.getElementById("conversationArea").style.display = "block";
@@ -86,7 +86,7 @@ function showConversation(convId) {
   });
 }
 
-// Reply as admin
+// Send admin reply
 document.getElementById("replyForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   if (!currentConvRef) return;
@@ -135,17 +135,18 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  // Check if the signed-in user email is allowed
-  if (!ALLOWED_ADMINS.includes(user.email)) {
+  console.log("Signed-in email:", user.email); // For debugging
+
+  // Only allow emails in ALLOWED_ADMINS
+  if (!ALLOWED_ADMINS.includes(user.email.toLowerCase())) {
     alert("Access denied. You are not an admin.");
-    await signOut(auth); // sign out to allow trying again
-    window.location.href = "/";
+    await signOut(auth); // sign out to retry
     return;
   }
 
-  // Admin verified → load conversation list
+  // Admin verified → load conversations
   loadConversations();
 });
 </script>
 </body>
-</html>
+  </html>
