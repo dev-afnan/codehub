@@ -135,9 +135,10 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  // User signed in → check verification and admin email
-  if (!user.emailVerified || !ALLOWED_ADMINS.includes(user.email)) {
-    alert("Access denied. Must use a verified admin Google account.");
+  // Check if the signed-in user email is allowed
+  if (!ALLOWED_ADMINS.includes(user.email)) {
+    alert("Access denied. You are not an admin.");
+    await signOut(auth); // sign out to allow trying again
     window.location.href = "/";
     return;
   }
