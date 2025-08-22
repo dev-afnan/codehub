@@ -52,9 +52,6 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-// Admin emails (lowercase)
-const ALLOWED_ADMINS = ["youremail@gmail.com"];
-
 let currentConvRef = null;
 
 // Render messages
@@ -104,11 +101,11 @@ document.getElementById("replyForm").addEventListener("submit", async (e) => {
     document.getElementById("replyMessage").value = "";
   } catch (err) {
     console.error("Error sending admin message:", err);
-    alert("Error sending message.");
+    alert("Error sending message. (Check Firestore rules for allowed emails)");
   }
 });
 
-// Load conversations
+// Load all conversations
 async function loadConversations() {
   const convList = document.getElementById("conversationList");
   convList.innerHTML = "";
@@ -127,26 +124,25 @@ async function loadConversations() {
   }
 }
 
-// Auth check
+// Auth check and admin access
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
-    // Not signed in → prompt Google login
+    // Not signed in → show login popup
     signInWithPopup(auth, provider).catch(err => console.error(err));
     return;
   }
 
-  console.log("Signed-in email:", user.email); // For debugging
+  console.log("Signed-in email:", user.email); // For debugging Firestore rule match
 
-  // Only allow emails in ALLOWED_ADMINS
-  if (!ALLOWED_ADMINS.includes(user.email.toLowerCase())) {
-    alert("Access denied. You are not an admin.");
-    await signOut(auth); // sign out to retry
-    return;
+  // Try loading conversations; if Firestore rules deny access, it will fail
+  try {
+    await loadConversations();
+  } catch (err) {
+    console.error("Firestore access denied:", err);
+    alert("Access denied. Your account is not allowed to access admin panel.");
+    await signOut(auth);
   }
-
-  // Admin verified → load conversations
-  loadConversations();
 });
 </script>
 </body>
-  </html>
+</html>
