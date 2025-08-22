@@ -121,24 +121,24 @@
 
     // Handle sending replies
     document.getElementById("replyForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const text = document.getElementById("replyMessage").value.trim();
-      if (!text) return;
+  e.preventDefault();
+  const text = document.getElementById("replyMessage").value.trim();
+  if (!text) return;
 
-      try {
-        await updateDoc(convRef, {
-          messages: arrayUnion({
-            sender: "admin",  // fixed sender
-            text,
-            timestamp: new Date().toISOString()
-          })
-        });
-        document.getElementById("replyMessage").value = "";
-      } catch (err) {
-        console.error("Error sending message:", err);
-        alert("Error sending message.");
-      }
+  try {
+    await updateDoc(convRef, {
+      messages: arrayUnion({
+        sender: "user",  // explicitly mark this message as from the user
+        text,
+        timestamp: new Date().toISOString()
+      })
     });
+    document.getElementById("replyMessage").value = "";
+  } catch (err) {
+    console.error("Error sending message:", err);
+    alert("Error sending message.");
+  }
+});
   </script>
 </body>
   </html>
