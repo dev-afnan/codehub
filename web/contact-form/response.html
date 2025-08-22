@@ -5,33 +5,30 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Conversation</title>
 <style>
-  body { max-width:700px; margin:auto; font-family:sans-serif; padding:20px; }
-  .hidden { display:none; }
-  .message { margin:10px 0; padding:8px; border-radius:6px; }
-  .user { background:#e0f7ff; }
-  .admin { background:#d8ffd8; text-align:right; }
-  #newMessage { width:100%; margin-top:10px; }
-  #passwordForm { margin-bottom:20px; }
-  #passwordForm input { width:70%; padding:8px; margin-right:5px; }
-  #passwordError { color:red; margin-top:5px; }
+  body { font-family: sans-serif; max-width:700px; margin:auto; padding:20px; }
+  #messages { margin-top:20px; border:1px solid #ccc; padding:10px; border-radius:6px; max-height:400px; overflow-y:auto; }
+  .message { margin-bottom:10px; }
+  .message.user { color: #333; }
+  .message.admin { color: #007bff; font-weight:bold; }
+  #msgForm { margin-top:20px; }
+  #passwordPrompt { margin-bottom:20px; padding:10px; background:#f0f0f0; border-radius:6px; }
 </style>
 </head>
 <body>
 <h2>Conversation</h2>
 
-<!-- Password form -->
-<div id="passwordForm">
-  <p>Please enter your conversation password to view messages:</p>
-  <input type="password" id="convPassword" placeholder="Enter password">
-  <button id="submitPassword">Submit</button>
-  <div id="passwordError"></div>
+<div id="passwordPrompt">
+  <label for="passwordInput">Enter your conversation password:</label>
+  <input type="password" id="passwordInput" required>
+  <button id="unlockBtn">Unlock Conversation</button>
 </div>
 
-<!-- Conversation messages -->
-<div id="conversation" class="hidden">
+<div id="conversationArea" style="display:none;">
   <div id="messages"></div>
-  <textarea id="newMessage" rows="3" placeholder="Type your message..."></textarea>
-  <button id="sendMessage">Send</button>
+  <form id="msgForm">
+    <textarea id="newMsg" rows="4" placeholder="Type your message..." required></textarea>
+    <button type="submit">Send</button>
+  </form>
 </div>
 
 <script type="module">
@@ -53,65 +50,79 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Get conversation ID from URL
 const urlParams = new URLSearchParams(window.location.search);
-const conversationId = urlParams.get("id");
-if(!conversationId){
+const convId = urlParams.get("id");
+
+if (!convId) {
   alert("Invalid conversation link.");
-  throw new Error("Missing conversation ID");
+  throw new Error("No conversation ID in URL");
 }
 
-const convRef = doc(db,"conversations",conversationId);
-const passwordForm = document.getElementById("passwordForm");
-const conversationDiv = document.getElementById("conversation");
+const convRef = doc(db, "conversations", convId);
+
+const passwordPromptDiv = document.getElementById("passwordPrompt");
+const passwordInput = document.getElementById("passwordInput");
+const unlockBtn = document.getElementById("unlockBtn");
+const conversationArea = document.getElementById("conversationArea");
 const messagesDiv = document.getElementById("messages");
-const passwordInput = document.getElementById("convPassword");
-const passwordError = document.getElementById("passwordError");
+const msgForm = document.getElementById("msgForm");
+const newMsg = document.getElementById("newMsg");
 
-// Handle password submission
-document.getElementById("submitPassword").addEventListener("click", async ()=>{
-  const enteredPassword = passwordInput.value.trim();
-  if(!enteredPassword) return;
+let enteredPassword = "";
 
-  const docSnap = await getDoc(convRef);
-  if(!docSnap.exists()){
-    passwordError.textContent = "Conversation not found.";
-    return;
-  }
+unlockBtn.addEventListener("click", async () => {
+  enteredPassword = passwordInput.value.trim();
+  if (!enteredPassword) return alert("Please enter your password.");
 
-  const data = docSnap.data();
-  if(enteredPassword !== data.password){
-    passwordError.textContent = "Incorrect password. Please try again.";
-    return;
-  }
+  try {
+    const docSnap = await getDoc(convRef);
+    if (!docSnap.exists()) {
+      return alert("Conversation does not exist.");
+    }
 
-  // Password correct: show conversation
-  passwordForm.classList.add("hidden");
-  conversationDiv.classList.remove("hidden");
+    const data = docSnap.data();
+    if (data.password !== enteredPassword) {
+      return alert("Incorrect password.");
+    }
 
-  // Load messages in real-time
-  onSnapshot(convRef, snap=>{
-    messagesDiv.innerHTML = "";
-    const msgs = snap.data().messages || [];
-    msgs.forEach(m=>{
-      const div = document.createElement("div");
-      div.className = "message " + m.sender;
-      div.textContent = `${m.sender}: ${m.text}`;
-      messagesDiv.appendChild(div);
+    // Password correct
+    passwordPromptDiv.style.display = "none";
+    conversationArea.style.display = "block";
+
+    // Show messages in real time
+    onSnapshot(convRef, (snapshot) => {
+      const convData = snapshot.data();
+      messagesDiv.innerHTML = "";
+      convData.messages.forEach(msg => {
+        const div = document.createElement("div");
+        div.className = "message " + (msg.sender === "user" ? "user" : "admin");
+        div.textContent = msg.sender + ": " + msg.text;
+        messagesDiv.appendChild(div);
+      });
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
     });
-  });
+
+  } catch (err) {
+    console.error("Error accessing conversation:", err);
+    alert("Error accessing conversation.");
+  }
 });
 
-// Send new message
-document.getElementById("sendMessage").addEventListener("click", async ()=>{
-  const text = document.getElementById("newMessage").value.trim();
-  if(!text) return;
+msgForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const text = newMsg.value.trim();
+  if (!text) return;
 
-  await updateDoc(convRef, {
-    messages: arrayUnion({ sender:"user", text, timestamp: serverTimestamp() })
-  });
-
-  document.getElementById("newMessage").value="";
+  try {
+    await updateDoc(convRef, {
+      messages: arrayUnion({ sender: "user", text, timestamp: serverTimestamp() }),
+      password: enteredPassword  // include password for Firestore rules
+    });
+    newMsg.value = "";
+  } catch (err) {
+    console.error("Error sending message:", err);
+    alert("Failed to send message. Check password or connection.");
+  }
 });
 </script>
 </body>
