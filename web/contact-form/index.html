@@ -5,46 +5,48 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Contact Form</title>
 <style>
-  body { font-family: sans-serif; max-width:700px; margin:auto; padding:20px; }
+  html, body { height: 100%; margin: 0; font-family: sans-serif; display:flex; flex-direction:column;}
+  main { flex:1; max-width:700px; margin:auto; padding:10px 20px; }
+  h2 { text-align:center; }
   label { display:block; margin-top:15px; font-weight:bold; }
   input, select, textarea { width:100%; padding:8px; margin-top:5px; box-sizing:border-box; }
-  button { margin-top:20px; padding:10px 15px; }
-  #confirmation { margin-top:20px; padding:10px; background:#f0f0f0; border-radius:6px; display:none; }
-  #confirmation a { color:#00abff; word-break:break-all; }
+  button { margin-top:20px; padding:10px 15px; background:#00abff; color:white; font-weight:bold; border:none; border-radius:10px; cursor:pointer;}
+  #linkContainer { margin-top:20px; padding:10px; background:#f0f0f0; border-radius:6px; display:none; }
 </style>
 </head>
 <body>
-<h2>Contact Me</h2>
-<form id="contactForm">
-  <label for="name">Your Name</label>
-  <input type="text" id="name" name="name" required>
+<main>
+  <h2>Contact Me</h2>
+  <form id="contactForm">
+    <label for="name">Your Name</label>
+    <input type="text" id="name" name="name" required>
 
-  <label for="email">Your Email</label>
-  <input type="email" id="email" name="email" required>
+    <label for="email">Your Email</label>
+    <input type="email" id="email" name="email" required>
 
-  <label for="topic">Topic</label>
-  <select id="topic" name="topic" required>
-    <option value="question">General Question❓</option>
-    <option value="feedback">Feedback ❤️</option>
-    <option value="suggestion">Suggestion ✨</option>
-    <option value="other">Other 🤔</option>
-  </select>
+    <label for="topic">Topic:</label>
+    <select id="topic" name="topic" required>
+      <option value="question">General Question❓</option>
+      <option value="feedback">Feedback ❤️</option>
+      <option value="suggestion">Suggestion ✨</option>
+      <option value="other">Other 🤔</option>
+    </select>
 
-  <label for="message">Your Message</label>
-  <textarea id="message" name="message" rows="6" required></textarea>
+    <label for="message">Your Message</label>
+    <textarea id="message" name="message" rows="6" required></textarea>
 
-  <button type="submit">Submit</button>
-</form>
+    <button type="submit">Submit</button>
+  </form>
 
-<div id="confirmation">
-  <p>Save or bookmark this link to see my response:</p>
-  <p id="link"></p>
-  <p>Password: <span id="password"></span></p>
-</div>
+  <div id="linkContainer">
+    <p>The page where you can continue the conversation. Please save or bookmark this link:</p>
+    <a id="convLink" href="#" target="_blank"></a>
+  </div>
+</main>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
 // Firebase config
 const firebaseConfig = {
@@ -62,52 +64,47 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const form = document.getElementById("contactForm");
-const confirmation = document.getElementById("confirmation");
-const linkEl = document.getElementById("link");
-const passwordEl = document.getElementById("password");
+const linkContainer = document.getElementById("linkContainer");
+const convLink = document.getElementById("convLink");
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  // Get form values
-  const name = form.name.value.trim();
-  const email = form.email.value.trim();
-  const topic = form.topic.value;
-  const message = form.message.value.trim();
+  const name = document.getElementById("name").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const topic = document.getElementById("topic").value;
+  const message = document.getElementById("message").value.trim();
 
-  // Generate unique conversation ID & password
-  const convId = crypto.randomUUID();
-  const password = Math.random().toString(36).slice(-8);
+  if (!name || !email || !topic || !message) return alert("Please fill in all fields.");
 
-  // Reference to Firestore doc
-  const convRef = doc(db, "conversations", convId);
-
-  // Save to Firestore
   try {
-    await setDoc(convRef, {
+    // Generate a random UUID for the conversation ID
+    const convId = crypto.randomUUID();
+
+    // Save conversation in Firestore
+    await addDoc(collection(db, "conversations"), {
       id: convId,
       name,
       email,
       topic,
-      messages: [{ sender: "user", text: message }],
-      password,
+      messages: [{ sender: "user", text: message, timestamp: serverTimestamp() }],
       createdAt: serverTimestamp()
     });
+
+    // Show the conversation link
+    const url = `${window.location.origin}/contact-form/response.html?id=${convId}`;
+    convLink.href = url;
+    convLink.textContent = url;
+    linkContainer.style.display = "block";
 
     // Clear form
     form.reset();
 
-    // Show confirmation with link & password
-    const convLink = `${window.location.origin}/contact-form/response.html?id=${convId}`;
-    linkEl.innerHTML = `<a href="${convLink}" target="_blank">${convLink}</a>`;
-    passwordEl.textContent = password;
-    confirmation.style.display = "block";
-
   } catch (err) {
-    console.error("Error saving conversation:", err);
+    console.error("Error creating conversation:", err);
     alert("There was an error submitting your message. Please try again.");
   }
 });
 </script>
 </body>
-</html>
+  </html>
