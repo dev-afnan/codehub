@@ -5,18 +5,34 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Conversation</title>
 <style>
-  body { max-width:700px;margin:auto;font-family:sans-serif;padding:20px;}
-  .message {margin:10px 0;padding:8px;border-radius:6px;}
-  .user{background:#e0f7ff;}
-  .admin{background:#d8ffd8;text-align:right;}
-  #newMessage {width:100%; margin-top:10px;}
+  body { max-width:700px; margin:auto; font-family:sans-serif; padding:20px; }
+  .hidden { display:none; }
+  .message { margin:10px 0; padding:8px; border-radius:6px; }
+  .user { background:#e0f7ff; }
+  .admin { background:#d8ffd8; text-align:right; }
+  #newMessage { width:100%; margin-top:10px; }
+  #passwordForm { margin-bottom:20px; }
+  #passwordForm input { width:70%; padding:8px; margin-right:5px; }
+  #passwordError { color:red; margin-top:5px; }
 </style>
 </head>
 <body>
 <h2>Conversation</h2>
-<div id="messages"></div>
-<textarea id="newMessage" rows="3"></textarea>
-<button id="sendMessage">Send</button>
+
+<!-- Password form -->
+<div id="passwordForm">
+  <p>Please enter your conversation password to view messages:</p>
+  <input type="password" id="convPassword" placeholder="Enter password">
+  <button id="submitPassword">Submit</button>
+  <div id="passwordError"></div>
+</div>
+
+<!-- Conversation messages -->
+<div id="conversation" class="hidden">
+  <div id="messages"></div>
+  <textarea id="newMessage" rows="3" placeholder="Type your message..."></textarea>
+  <button id="sendMessage">Send</button>
+</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
@@ -33,39 +49,68 @@ const firebaseConfig = {
   measurementId: "G-1TNH5G7SE4"
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+// Get conversation ID from URL
 const urlParams = new URLSearchParams(window.location.search);
 const conversationId = urlParams.get("id");
-if(!conversationId){ alert("Invalid conversation ID"); throw new Error("Missing ID"); }
+if(!conversationId){
+  alert("Invalid conversation link.");
+  throw new Error("Missing conversation ID");
+}
 
 const convRef = doc(db,"conversations",conversationId);
-const docSnap = await getDoc(convRef);
-if(!docSnap.exists()){ alert("Conversation not found"); throw new Error("Not found"); }
-
-const userPassword = prompt("Enter your conversation password:");
-if(userPassword !== docSnap.data().password){ alert("Incorrect password"); throw new Error("Wrong password"); }
-
+const passwordForm = document.getElementById("passwordForm");
+const conversationDiv = document.getElementById("conversation");
 const messagesDiv = document.getElementById("messages");
+const passwordInput = document.getElementById("convPassword");
+const passwordError = document.getElementById("passwordError");
 
-onSnapshot(convRef, snap=>{
-  messagesDiv.innerHTML = "";
-  const messages = snap.data().messages || [];
-  messages.forEach(msg=>{
-    const div = document.createElement("div");
-    div.className = "message "+msg.sender;
-    div.textContent = msg.sender+": "+msg.text;
-    messagesDiv.appendChild(div);
+// Handle password submission
+document.getElementById("submitPassword").addEventListener("click", async ()=>{
+  const enteredPassword = passwordInput.value.trim();
+  if(!enteredPassword) return;
+
+  const docSnap = await getDoc(convRef);
+  if(!docSnap.exists()){
+    passwordError.textContent = "Conversation not found.";
+    return;
+  }
+
+  const data = docSnap.data();
+  if(enteredPassword !== data.password){
+    passwordError.textContent = "Incorrect password. Please try again.";
+    return;
+  }
+
+  // Password correct: show conversation
+  passwordForm.classList.add("hidden");
+  conversationDiv.classList.remove("hidden");
+
+  // Load messages in real-time
+  onSnapshot(convRef, snap=>{
+    messagesDiv.innerHTML = "";
+    const msgs = snap.data().messages || [];
+    msgs.forEach(m=>{
+      const div = document.createElement("div");
+      div.className = "message " + m.sender;
+      div.textContent = `${m.sender}: ${m.text}`;
+      messagesDiv.appendChild(div);
+    });
   });
 });
 
+// Send new message
 document.getElementById("sendMessage").addEventListener("click", async ()=>{
   const text = document.getElementById("newMessage").value.trim();
   if(!text) return;
-  await updateDoc(convRef,{
-    messages: arrayUnion({ sender:"user", text, timestamp:serverTimestamp() })
+
+  await updateDoc(convRef, {
+    messages: arrayUnion({ sender:"user", text, timestamp: serverTimestamp() })
   });
+
   document.getElementById("newMessage").value="";
 });
 </script>
