@@ -6,33 +6,41 @@
 <title>Contact Form</title>
 <style>
   body { font-family: sans-serif; max-width:700px; margin:auto; padding:20px; }
-  label, input, select, textarea, button { display:block; width:100%; margin-top:10px; }
+  label { display:block; margin-top:15px; font-weight:bold; }
+  input, select, textarea { width:100%; padding:8px; margin-top:5px; box-sizing:border-box; }
+  button { margin-top:20px; padding:10px 15px; }
+  #confirmation { margin-top:20px; padding:10px; background:#f0f0f0; border-radius:6px; display:none; }
+  #confirmation a { color:#00abff; word-break:break-all; }
 </style>
 </head>
 <body>
-<main>
-  <h2>Contact Me</h2>
-  <form id="contactForm">
-    <label>Name</label>
-    <input type="text" id="name" required>
-    
-    <label>Email</label>
-    <input type="email" id="email" required>
-    
-    <label>Topic</label>
-    <select id="topic" required>
-      <option value="question">Question</option>
-      <option value="feedback">Feedback</option>
-      <option value="suggestion">Suggestion</option>
-      <option value="other">Other</option>
-    </select>
-    
-    <label>Message</label>
-    <textarea id="message" rows="6" required></textarea>
-    
-    <button type="submit">Submit</button>
-  </form>
-</main>
+<h2>Contact Me</h2>
+<form id="contactForm">
+  <label for="name">Your Name</label>
+  <input type="text" id="name" name="name" required>
+
+  <label for="email">Your Email</label>
+  <input type="email" id="email" name="email" required>
+
+  <label for="topic">Topic</label>
+  <select id="topic" name="topic" required>
+    <option value="question">General Question❓</option>
+    <option value="feedback">Feedback ❤️</option>
+    <option value="suggestion">Suggestion ✨</option>
+    <option value="other">Other 🤔</option>
+  </select>
+
+  <label for="message">Your Message</label>
+  <textarea id="message" name="message" rows="6" required></textarea>
+
+  <button type="submit">Submit</button>
+</form>
+
+<div id="confirmation">
+  <p>Save or bookmark this link to see my response:</p>
+  <p id="link"></p>
+  <p>Password: <span id="password"></span></p>
+</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
@@ -53,40 +61,52 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Generate random password
-function generatePassword(length=8) {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let pw = "";
-  for(let i=0;i<length;i++){ pw += chars.charAt(Math.floor(Math.random()*chars.length)); }
-  return pw;
-}
+const form = document.getElementById("contactForm");
+const confirmation = document.getElementById("confirmation");
+const linkEl = document.getElementById("link");
+const passwordEl = document.getElementById("password");
 
-// Handle form submission
-document.getElementById("contactForm").addEventListener("submit", async e=>{
+form.addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  const name = document.getElementById("name").value;
-  const email = document.getElementById("email").value;
-  const topic = document.getElementById("topic").value;
-  const message = document.getElementById("message").value;
+  // Get form values
+  const name = form.name.value.trim();
+  const email = form.email.value.trim();
+  const topic = form.topic.value;
+  const message = form.message.value.trim();
 
-  const password = generatePassword(8);
-  const convRef = doc(db, "conversations", crypto.randomUUID());
+  // Generate unique conversation ID & password
+  const convId = crypto.randomUUID();
+  const password = Math.random().toString(36).slice(-8);
 
-  await setDoc(convRef, {
-    name, email, topic, password,
-    createdAt: serverTimestamp(),
-    messages: [{ sender:"user", text: message, timestamp: serverTimestamp() }]
-  });
+  // Reference to Firestore doc
+  const convRef = doc(db, "conversations", convId);
 
-  const link = `${window.location.origin}/contact-form/response.html?id=${convRef.id}`;
-  document.querySelector("main").innerHTML = `
-    <h2>Thank you, ${name}!</h2>
-    <p>Your conversation has been created.</p>
-    <p><strong>Conversation link:</strong> <a href="${link}">${link}</a></p>
-    <p><strong>Password:</strong> ${password}</p>
-    <p>Please save this link and password to view your conversation.</p>
-  `;
+  // Save to Firestore
+  try {
+    await setDoc(convRef, {
+      id: convId,
+      name,
+      email,
+      topic,
+      messages: [{ sender: "user", text: message }],
+      password,
+      createdAt: serverTimestamp()
+    });
+
+    // Clear form
+    form.reset();
+
+    // Show confirmation with link & password
+    const convLink = `${window.location.origin}/contact-form/response.html?id=${convId}`;
+    linkEl.innerHTML = `<a href="${convLink}" target="_blank">${convLink}</a>`;
+    passwordEl.textContent = password;
+    confirmation.style.display = "block";
+
+  } catch (err) {
+    console.error("Error saving conversation:", err);
+    alert("There was an error submitting your message. Please try again.");
+  }
 });
 </script>
 </body>
