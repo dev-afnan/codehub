@@ -1,92 +1,84 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Contact Form</title>
-  <style>
-    body { font-family: sans-serif; max-width: 700px; margin: auto; padding: 20px; }
-    form { display: flex; flex-direction: column; }
-    label { margin-top: 10px; }
-    input, textarea { padding: 8px; margin-top: 5px; }
-    button { margin-top: 15px; padding: 10px; cursor: pointer; }
-    #linkContainer { display: none; margin-top: 20px; }
-    a { color: blue; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contact Form</title>
+<style>
+body { font-family:sans-serif; max-width:700px; margin:auto; padding:20px; }
+form { display:flex; flex-direction:column; }
+label { margin-top:10px; }
+input, textarea { padding:8px; margin-top:5px; }
+button { margin-top:15px; padding:10px; cursor:pointer; }
+#linkContainer { display:none; margin-top:20px; }
+a { color:blue; }
+</style>
 </head>
 <body>
-  <h2>Contact Form</h2>
-  <form id="contactForm">
-    <label>Name: <input type="text" id="name" required></label>
-    <label>Email: <input type="email" id="email" required></label>
-    <label>Topic: <input type="text" id="topic" required></label>
-    <label>Message: <textarea id="message" required></textarea></label>
-    <button type="submit">Submit</button>
-  </form>
+<h2>Contact Form</h2>
+<form id="contactForm">
+  <label>Name: <input type="text" id="name" required></label>
+  <label>Email: <input type="email" id="email" required></label>
+  <label>Topic: <input type="text" id="topic" required></label>
+  <label>Message: <textarea id="message" required></textarea></label>
+  <button type="submit">Submit</button>
+</form>
 
-  <div id="linkContainer">
-    <p>Conversation created! Save this link to continue the chat:</p>
-    <a id="convLink" target="_blank"></a>
-  </div>
+<div id="linkContainer">
+  <p>Conversation created! Save this link:</p>
+  <a id="convLink" target="_blank"></a>
+</div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-    import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
-    // Firebase config
-    const firebaseConfig = {
-      apiKey: "AIzaSyDxMO7-n_ZXp-axX4wBRV8hsVfRmI-aVcM",
-      authDomain: "afnanix-contact-form.firebaseapp.com",
-      projectId: "afnanix-contact-form",
-      storageBucket: "afnanix-contact-form.firebasestorage.app",
-      messagingSenderId: "994386258441",
-      appId: "1:994386258441:web:5e1b2b412a3778845da6d8",
-      measurementId: "G-1TNH5G7SE4"
-    };
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyDxMO7-n_ZXp-axX4wBRV8hsVfRmI-aVcM",
+  authDomain: "afnanix-contact-form.firebaseapp.com",
+  projectId: "afnanix-contact-form",
+  storageBucket: "afnanix-contact-form.firebasestorage.app",
+  messagingSenderId: "994386258441",
+  appId: "1:994386258441:web:5e1b2b412a3778845da6d8",
+  measurementId: "G-1TNH5G7SE4"
+};
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-    const form = document.getElementById("contactForm");
-    const convLink = document.getElementById("convLink");
-    const linkContainer = document.getElementById("linkContainer");
+const form = document.getElementById("contactForm");
+const linkContainer = document.getElementById("linkContainer");
+const convLink = document.getElementById("convLink");
 
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const name = document.getElementById("name").value.trim();
-      const email = document.getElementById("email").value.trim();
-      const topic = document.getElementById("topic").value.trim();
-      const message = document.getElementById("message").value.trim();
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const name = document.getElementById("name").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const topic = document.getElementById("topic").value.trim();
+  const message = document.getElementById("message").value.trim();
+  if (!name || !email || !topic || !message) return;
 
-      if (!name || !email || !topic || !message) return;
-
-      try {
-        // Generate unique conversation ID
-        const convId = crypto.randomUUID();
-
-        // Create conversation document in Firestore
-        await setDoc(doc(db, "conversations", convId), {
-  name,
-  email,
-  topic,
-  createdAt: serverTimestamp(), // allowed
-  messages: [
-    { sender: "user", text: message, timestamp: new Date().toISOString() } // safe
-  ]
-});
-
-        // Show conversation link
-        const url = `${window.location.origin}/contact-form/response.html?id=${convId}`;
-        convLink.href = url;
-        convLink.textContent = url;
-        linkContainer.style.display = "block";
-
-        form.reset();
-      } catch (err) {
-        console.error("Error creating conversation:", err);
-        alert("There was an error submitting your message. Please try again.");
-      }
+  try {
+    const convId = crypto.randomUUID();
+    await setDoc(doc(db, "conversations", convId), {
+      name,
+      email,
+      topic,
+      createdAt: serverTimestamp(),
+      messages: [{ sender: "user", text: message, timestamp: new Date().toISOString() }]
     });
-  </script>
+
+    const url = `${window.location.origin}/contact-form/response.html?id=${convId}`;
+    convLink.href = url;
+    convLink.textContent = url;
+    linkContainer.style.display = "block";
+    form.reset();
+  } catch (err) {
+    console.error("Error creating conversation:", err);
+    alert("Error submitting your message.");
+  }
+});
+</script>
 </body>
 </html>
