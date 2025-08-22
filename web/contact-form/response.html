@@ -1,97 +1,99 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Conversation</title>
-<style>
-  body { font-family: sans-serif; max-width:700px; margin:auto; padding:20px; }
-  #messages { margin-top:20px; border:1px solid #ccc; padding:10px; border-radius:6px; max-height:400px; overflow-y:auto; }
-  .message { margin-bottom:10px; }
-  .message.user { color: #333; }
-  .message.admin { color: #007bff; font-weight:bold; }
-  #msgForm { margin-top:20px; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conversation</title>
+  <style>
+    body { font-family: sans-serif; max-width:700px; margin:auto; padding:20px; }
+    #messages { margin-top:20px; border:1px solid #ccc; padding:10px; border-radius:6px; max-height:400px; overflow-y:auto; }
+    .message { margin-bottom:10px; }
+    .message.user { color: #333; }
+    .message.admin { color: #007bff; font-weight:bold; }
+    #msgForm { margin-top:20px; display:flex; flex-direction:column; }
+    textarea { margin-bottom:10px; padding:8px; }
+    button { padding:10px; cursor:pointer; }
+  </style>
 </head>
 <body>
-<h2>Conversation</h2>
+  <h2>Conversation</h2>
 
-<div id="conversationArea">
-  <div id="messages"></div>
-  <form id="msgForm">
-    <textarea id="newMsg" rows="4" placeholder="Type your message..." required></textarea>
-    <button type="submit">Send</button>
-  </form>
-</div>
+  <div id="conversationArea">
+    <div id="messages"></div>
+    <form id="msgForm">
+      <textarea id="newMsg" rows="4" placeholder="Type your message..." required></textarea>
+      <button type="submit">Send</button>
+    </form>
+  </div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-import { getFirestore, doc, getDoc, updateDoc, arrayUnion, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+    import { getFirestore, doc, updateDoc, arrayUnion, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
-// Firebase config
-const firebaseConfig = {
-  apiKey: "AIzaSyDxMO7-n_ZXp-axX4wBRV8hsVfRmI-aVcM",
-  authDomain: "afnanix-contact-form.firebaseapp.com",
-  projectId: "afnanix-contact-form",
-  storageBucket: "afnanix-contact-form.firebasestorage.app",
-  messagingSenderId: "994386258441",
-  appId: "1:994386258441:web:5e1b2b412a3778845da6d8",
-  measurementId: "G-1TNH5G7SE4"
-};
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyDxMO7-n_ZXp-axX4wBRV8hsVfRmI-aVcM",
+      authDomain: "afnanix-contact-form.firebaseapp.com",
+      projectId: "afnanix-contact-form",
+      storageBucket: "afnanix-contact-form.firebasestorage.app",
+      messagingSenderId: "994386258441",
+      appId: "1:994386258441:web:5e1b2b412a3778845da6d8",
+      measurementId: "G-1TNH5G7SE4"
+    };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-const urlParams = new URLSearchParams(window.location.search);
-const convId = urlParams.get("id");
+    // Get conversation ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const convId = urlParams.get("id");
 
-if (!convId) {
-  alert("Invalid conversation link.");
-  throw new Error("No conversation ID in URL");
-}
+    if (!convId) {
+      alert("Invalid conversation link.");
+      throw new Error("No conversation ID in URL");
+    }
 
-const convRef = doc(db, "conversations", convId);
+    const convRef = doc(db, "conversations", convId);
 
-const messagesDiv = document.getElementById("messages");
-const msgForm = document.getElementById("msgForm");
-const newMsg = document.getElementById("newMsg");
+    const messagesDiv = document.getElementById("messages");
+    const msgForm = document.getElementById("msgForm");
+    const newMsg = document.getElementById("newMsg");
 
-// Real-time listener for messages
-onSnapshot(convRef, (snapshot) => {
-  if (!snapshot.exists()) {
-    messagesDiv.innerHTML = "<p>Conversation not found.</p>";
-    return;
-  }
-  const data = snapshot.data();
-  messagesDiv.innerHTML = "";
-  if (data.messages) {
-    data.messages.forEach(msg => {
-      const div = document.createElement("div");
-      div.className = "message " + (msg.sender === "user" ? "user" : "admin");
-      div.textContent = msg.sender + ": " + msg.text;
-      messagesDiv.appendChild(div);
+    // Real-time listener for conversation
+    onSnapshot(convRef, (snapshot) => {
+      if (!snapshot.exists()) {
+        messagesDiv.innerHTML = "<p>Conversation not found.</p>";
+        return;
+      }
+      const data = snapshot.data();
+      messagesDiv.innerHTML = "";
+      if (data.messages) {
+        data.messages.forEach(msg => {
+          const div = document.createElement("div");
+          div.className = "message " + (msg.sender === "user" ? "user" : "admin");
+          div.textContent = msg.sender + ": " + msg.text;
+          messagesDiv.appendChild(div);
+        });
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      }
     });
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-  }
-});
 
-// Send new message
-msgForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const text = newMsg.value.trim();
-  if (!text) return;
+    // Send message
+    msgForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const text = newMsg.value.trim();
+      if (!text) return;
 
-  try {
-    await updateDoc(convRef, {
-      messages: arrayUnion({ sender: "user", text, timestamp: serverTimestamp() })
+      try {
+        await updateDoc(convRef, {
+          messages: arrayUnion({ sender: "user", text, timestamp: serverTimestamp() })
+        });
+        newMsg.value = "";
+      } catch (err) {
+        console.error("Error sending message:", err);
+        alert("Failed to send message. Please try again.");
+      }
     });
-    newMsg.value = "";
-  } catch (err) {
-    console.error("Error sending message:", err);
-    alert("Failed to send message. Please try again.");
-  }
-});
-</script>
+  </script>
 </body>
 </html>
