@@ -52,11 +52,12 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-// Only allow these admin emails
+// Only allow these verified admin emails
 const ALLOWED_ADMINS = ["youremail@gmail.com"];
 
 let currentConvRef = null;
 
+// Render messages
 function renderMessage(msg, container) {
   const div = document.createElement("div");
   div.className = "message " + msg.sender;
@@ -65,6 +66,7 @@ function renderMessage(msg, container) {
   container.scrollTop = container.scrollHeight;
 }
 
+// Show a selected conversation
 function showConversation(convId) {
   currentConvRef = doc(db, "conversations", convId);
   document.getElementById("conversationArea").style.display = "block";
@@ -84,7 +86,7 @@ function showConversation(convId) {
   });
 }
 
-// Send admin reply
+// Reply as admin
 document.getElementById("replyForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   if (!currentConvRef) return;
@@ -106,37 +108,43 @@ document.getElementById("replyForm").addEventListener("submit", async (e) => {
   }
 });
 
-// Check auth and email verification
-onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    if (!user.emailVerified || !ALLOWED_ADMINS.includes(user.email)) {
-      alert("Access denied. Must use verified admin Google account.");
-      window.location.href = "/";
-      return;
-    }
-
-    // Load all conversations
-    const convList = document.getElementById("conversationList");
-    convList.innerHTML = "";
-    const snapshot = await getDocs(collection(db, "conversations"));
-    if (snapshot.empty) {
-      convList.innerHTML = "<p>No conversations yet.</p>";
-    } else {
-      snapshot.forEach(docSnap => {
-        const data = docSnap.data();
-        const div = document.createElement("div");
-        div.className = "conversation";
-        div.textContent = `${data.name} (${data.topic})`;
-        div.addEventListener("click", () => showConversation(docSnap.id));
-        convList.appendChild(div);
-      });
-    }
-
+// Load conversations
+async function loadConversations() {
+  const convList = document.getElementById("conversationList");
+  convList.innerHTML = "";
+  const snapshot = await getDocs(collection(db, "conversations"));
+  if (snapshot.empty) {
+    convList.innerHTML = "<p>No conversations yet.</p>";
   } else {
-    // prompt login
-    signInWithPopup(auth, provider).catch(err => console.error(err));
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      const div = document.createElement("div");
+      div.className = "conversation";
+      div.textContent = `${data.name} (${data.topic})`;
+      div.addEventListener("click", () => showConversation(docSnap.id));
+      convList.appendChild(div);
+    });
   }
+}
+
+// Auth check
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    // Not signed in → prompt Google login
+    signInWithPopup(auth, provider).catch(err => console.error(err));
+    return;
+  }
+
+  // User signed in → check verification and admin email
+  if (!user.emailVerified || !ALLOWED_ADMINS.includes(user.email)) {
+    alert("Access denied. Must use a verified admin Google account.");
+    window.location.href = "/";
+    return;
+  }
+
+  // Admin verified → load conversation list
+  loadConversations();
 });
 </script>
 </body>
-  </html>
+</html>
