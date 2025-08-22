@@ -71,7 +71,6 @@ function showConversation(convId) {
   const messagesDiv = document.getElementById("messages");
   messagesDiv.innerHTML = "";
 
-  // live updates
   onSnapshot(currentConvRef, (snap) => {
     if (snap.exists()) {
       messagesDiv.innerHTML = "";
@@ -85,7 +84,7 @@ function showConversation(convId) {
   });
 }
 
-// Listen for replies
+// Send admin reply
 document.getElementById("replyForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   if (!currentConvRef) return;
@@ -107,12 +106,12 @@ document.getElementById("replyForm").addEventListener("submit", async (e) => {
   }
 });
 
-// Check auth
+// Check auth and email verification
 onAuthStateChanged(auth, async (user) => {
   if (user) {
-    if (!ALLOWED_ADMINS.includes(user.email)) {
-      alert("Access denied. You are not an admin.");
-      window.location.href = "/"; // redirect non-admins
+    if (!user.emailVerified || !ALLOWED_ADMINS.includes(user.email)) {
+      alert("Access denied. Must use verified admin Google account.");
+      window.location.href = "/";
       return;
     }
 
@@ -135,10 +134,7 @@ onAuthStateChanged(auth, async (user) => {
 
   } else {
     // prompt login
-    signInWithPopup(auth, provider).catch(err => {
-      console.error(err);
-      alert("Login failed");
-    });
+    signInWithPopup(auth, provider).catch(err => console.error(err));
   }
 });
 </script>
