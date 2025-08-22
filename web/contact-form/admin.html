@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Admin Panel</title>
+<style>
+  body { font-family:sans-serif; max-width:900px; margin:auto; padding:20px; }
+  .conversation {border:1px solid #ccc; padding:10px; margin:10px 0;}
+  input {width:70%; margin-right:5px;}
+</style>
+</head>
+<body>
+<h2>Admin Panel</h2>
+<div id="auth"><button id="loginBtn">Login as Admin</button></div>
+<div id="conversations"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+import { getFirestore, collection, onSnapshot, doc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyDxMO7-n_ZXp-axX4wBRV8hsVfRmI-aVcM",
+  authDomain: "afnanix-contact-form.firebaseapp.com",
+  projectId: "afnanix-contact-form",
+  storageBucket: "afnanix-contact-form.firebasestorage.app",
+  messagingSenderId: "994386258441",
+  appId: "1:994386258441:web:5e1b2b412a3778845da6d8",
+  measurementId: "G-1TNH5G7SE4"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+
+const authDiv = document.getElementById("auth");
+const convDiv = document.getElementById("conversations");
+
+// Login
+document.getElementById("loginBtn").onclick = () => signInWithPopup(auth, provider);
+
+onAuthStateChanged(auth, user => {
+  if(user){
+    authDiv.innerHTML = `Logged in as ${user.displayName} <button id="logoutBtn">Logout</button>`;
+    document.getElementById("logoutBtn").onclick = ()=>signOut(auth);
+    loadConversations();
+  } else { convDiv.innerHTML=""; }
+});
+
+function loadConversations(){
+  const convCol = collection(db,"conversations");
+  onSnapshot(convCol, snap=>{
+    convDiv.innerHTML="";
+    snap.forEach(docSnap=>{
+      const data = docSnap.data();
+      const div = document.createElement("div");
+      div.className="conversation";
+      div.innerHTML = `<b>${data.name}</b> (${data.email}) - Topic: ${data.topic}<br>`;
+      
+      // Messages
+      data.messages.forEach(m=>{
+        const p = document.createElement("p");
+        p.textContent = `${m.sender}: ${m.text}`;
+        div.appendChild(p);
+      });
+
+      // Reply input
+      const input = document.createElement("input"); input.placeholder="Reply...";
+      const btn = document.createElement("button"); btn.textContent="Send";
+      btn.onclick = async ()=>{
+        const text = input.value.trim(); if(!text) return;
+        await updateDoc(doc(db,"conversations",docSnap.id),{
+          messages: arrayUnion({ sender:"admin", text, timestamp:new Date() })
+        });
+        input.value="";
+      };
+      div.appendChild(input); div.appendChild(btn);
+      convDiv.appendChild(div);
+    });
+  });
+}
+</script>
+</body>
+</html>
