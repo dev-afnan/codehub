@@ -9,7 +9,7 @@ body { font-family:sans-serif; max-width:800px; margin:auto; padding:20px; }
 h2 { text-align:center; }
 #loginPrompt { text-align:center; margin-top:20px; }
 #conversationList { margin-top:20px; display:none; }
-.conversation { border:1px solid #ccc; border-radius:5px; padding:10px; margin-bottom:10px; cursor:pointer; }
+.conversation { border:1px solid #ccc; border-radius:5px; padding:10px; margin-bottom:10px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; }
 #messages { border:1px solid #ccc; border-radius:5px; padding:10px; height:400px; overflow-y:auto; margin-bottom:20px; display:flex; flex-direction:column; }
 .message { margin:5px 0; padding:6px 10px; border-radius:5px; max-width:75%; }
 .user { background:#e1f5fe; align-self:flex-start; }
@@ -18,6 +18,8 @@ form { display:flex; gap:10px; }
 input[type=text] { flex:1; padding:8px; border:1px solid #ccc; border-radius:5px; }
 button { padding:8px 16px; cursor:pointer; background:#007bff; border:none; color:#fff; border-radius:5px; }
 button:hover { background:#0056b3; }
+.delete-btn { background:#ff4d4d; }
+.delete-btn:hover { background:#cc0000; }
 </style>
 </head>
 <body>
@@ -40,7 +42,7 @@ button:hover { background:#0056b3; }
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-import { getFirestore, collection, getDocs, doc, onSnapshot, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { getFirestore, collection, getDocs, doc, onSnapshot, updateDoc, arrayUnion, deleteDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
 // Firebase config
@@ -59,7 +61,7 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-// Replace this with your actual admin UID from Firebase Authentication
+// Replace with your actual admin UID
 const ADMIN_UID = "ph5bDK8VzAOJzqaQxrEje2Z5eK13";
 
 let currentConvRef = null;
@@ -129,8 +131,31 @@ async function loadConversations() {
         const data = docSnap.data();
         const div = document.createElement("div");
         div.className = "conversation";
-        div.textContent = `${data.name} (${data.topic})`;
-        div.addEventListener("click", () => showConversation(docSnap.id));
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = `${data.name} (${data.topic})`;
+        div.appendChild(nameSpan);
+
+        // Click on conversation to open
+        nameSpan.addEventListener("click", () => showConversation(docSnap.id));
+
+        // Delete button
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "Delete";
+        deleteBtn.className = "delete-btn";
+        deleteBtn.addEventListener("click", async () => {
+          if (confirm("Are you sure you want to delete this conversation?")) {
+            try {
+              await deleteDoc(doc(db, "conversations", docSnap.id));
+              alert("Conversation deleted successfully.");
+              loadConversations(); // Refresh list
+            } catch (err) {
+              console.error("Error deleting conversation:", err);
+              alert("Failed to delete conversation.");
+            }
+          }
+        });
+
+        div.appendChild(deleteBtn);
         convList.appendChild(div);
       });
     }
@@ -147,7 +172,6 @@ async function loadConversations() {
 document.getElementById("googleLoginBtn").addEventListener("click", async () => {
   try {
     const result = await signInWithPopup(auth, provider);
-    console.log("Signed-in user UID:", result.user.uid);
     if (result.user.uid !== ADMIN_UID) {
       alert("Access denied. This account is not an admin.");
       await signOut(auth);
@@ -164,7 +188,6 @@ document.getElementById("googleLoginBtn").addEventListener("click", async () => 
 // Handle already signed-in users
 onAuthStateChanged(auth, async (user) => {
   if (user) {
-    console.log("Signed-in user UID:", user.uid);
     if (user.uid !== ADMIN_UID) {
       alert("Access denied. This account is not an admin.");
       await signOut(auth);
@@ -176,4 +199,4 @@ onAuthStateChanged(auth, async (user) => {
 });
 </script>
 </body>
-  </html>
+</html>
