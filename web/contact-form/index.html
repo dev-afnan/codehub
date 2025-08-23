@@ -1,116 +1,74 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Contact Form</title>
-<style>
-html, body { height:100%; margin:0; font-family:sans-serif; display:flex; flex-direction:column; }
-main { flex:1; max-width:700px; width:100%; margin:auto; padding:10px 20px; box-sizing:border-box; }
-h2 { text-align:center; }
-label { display:block; margin-top:15px; font-weight:bold; }
-input, select, textarea { width:100%; padding:8px; margin-top:5px; box-sizing:border-box; font-family:sans-serif; }
-button { margin-top:20px; padding:10px 15px; font-weight:bold; background-color:#00abff; color:white; border:none; border-radius:10px; cursor:pointer; }
-button:hover { background-color:#007acc; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contact Form</title>
 </head>
 <body>
-<main>
-<h2>Contact Me</h2>
-<form id="contactForm">
-  <label for="name">Your Name</label>
-  <input type="text" id="name" name="name" required>
+  <h1>Contact Us</h1>
+  <form id="contactForm">
+    <input type="text" id="name" placeholder="Your name" required /><br>
+    <input type="email" id="email" placeholder="Your email" required /><br>
+    <textarea id="message" placeholder="Your message" required></textarea><br>
+    <button type="submit">Send</button>
+  </form>
 
-  <label for="email">Your Email</label>
-  <input type="email" id="email" name="email" required>
+  <div id="result"></div>
 
-  <label for="topic">Topic:</label>
-  <select id="topic" name="topic" required>
-    <option value="question">General Question❓</option>
-    <option value="feedback">Feedback ❤️</option>
-    <option value="suggestion">Suggestion ✨</option>
-    <option value="other">Other 🤔</option>
-  </select>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+    import { getFirestore, collection, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
-  <label for="message">Your Message</label>
-  <textarea id="message" name="message" rows="6" required></textarea>
+    // Your Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyDxMO7-n_ZXp-axX4wBRV8hsVfRmI-aVcM",
+      authDomain: "afnanix-contact-form.firebaseapp.com",
+      projectId: "afnanix-contact-form",
+      storageBucket: "afnanix-contact-form.firebasestorage.app",
+      messagingSenderId: "994386258441",
+      appId: "1:994386258441:web:5e1b2b412a3778845da6d8",
+      measurementId: "G-1TNH5G7SE4"
+    };
 
-  <button type="submit">Submit</button>
-</form>
-</main>
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+    document.getElementById("contactForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
 
-// Firebase config
-const firebaseConfig = {
-  apiKey: "AIzaSyDxMO7-n_ZXp-axX4wBRV8hsVfRmI-aVcM",
-  authDomain: "afnanix-contact-form.firebaseapp.com",
-  projectId: "afnanix-contact-form",
-  storageBucket: "afnanix-contact-form.firebasestorage.app",
-  messagingSenderId: "994386258441",
-  appId: "1:994386258441:web:5e1b2b412a3778845da6d8",
-  measurementId: "G-1TNH5G7SE4"
-};
+      const name = document.getElementById("name").value;
+      const email = document.getElementById("email").value;
+      const message = document.getElementById("message").value;
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
+      try {
+        // Generate a unique conversation ID
+        const conversationId = crypto.randomUUID();
 
-// Automatically sign in anonymously if not already
-onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    signInAnonymously(auth)
-      .then(() => console.log("Signed in anonymously"))
-      .catch((err) => console.error("Anonymous sign-in error:", err));
-  }
-});
+        // Create the conversation doc
+        await setDoc(doc(collection(db, "conversations"), conversationId), {
+          createdAt: serverTimestamp(),
+          messages: [
+            {
+              sender: "user",
+              name,
+              email,
+              text: message,
+              timestamp: serverTimestamp()
+            }
+          ]
+        });
 
-// Handle form submission
-const form = document.getElementById("contactForm");
-form.addEventListener("submit", async (e) => {
-  e.preventDefault();
-
-  const user = auth.currentUser;
-  if (!user) {
-    alert("Please wait, signing you in...");
-    return;
-  }
-
-  const name = document.getElementById("name").value.trim();
-  const email = document.getElementById("email").value.trim();
-  const topic = document.getElementById("topic").value;
-  const message = document.getElementById("message").value.trim();
-
-  if (!name || !email || !message) {
-    alert("Please fill all required fields.");
-    return;
-  }
-
-  try {
-    const convDoc = await addDoc(collection(db, "conversations"), {
-      name,
-      email,
-      topic,
-      messages: [
-        { sender: "user", text: message, timestamp: serverTimestamp() }
-      ],
-      createdAt: serverTimestamp()
+        document.getElementById("result").innerHTML =
+          `Message sent!<br>
+          View your conversation here: <a href="response.html?id=${conversationId}" target="_blank">Open Conversation</a>`;
+        
+        document.getElementById("contactForm").reset();
+      } catch (err) {
+        console.error("Error creating conversation:", err);
+        alert("There was an error. Please try again.");
+      }
     });
-
-    const link = `${window.location.origin}/contact-form/response.html?id=${convDoc.id}`;
-    alert(`Your message was submitted!\nPlease save or bookmark this link to see replies:\n${link}`);
-
-    form.reset();
-
-  } catch (err) {
-    console.error("Error creating conversation:", err);
-    alert("Error submitting message. Please try again.");
-  }
-});
-</script>
+  </script>
 </body>
 </html>
