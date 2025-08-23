@@ -2,24 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Contact Form</title>
-</head>
-<body>
-  <h1>Contact Us</h1>
-  <form id="contactForm">
-    <input type="text" id="name" placeholder="Your name" required /><br>
-    <input type="email" id="email" placeholder="Your email" required /><br>
-    <textarea id="message" placeholder="Your message" required></textarea><br>
-    <button type="submit">Send</button>
-  </form>
-
-  <div id="result"></div>
-
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-    import { getFirestore, collection, doc, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, doc, setDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
+    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyDxMO7-n_ZXp-axX4wBRV8hsVfRmI-aVcM",
       authDomain: "afnanix-contact-form.firebaseapp.com",
@@ -33,42 +22,70 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    document.getElementById("contactForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
+    // Handle form submit
+    document.addEventListener("DOMContentLoaded", () => {
+      const form = document.getElementById("contactForm");
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
 
-      const name = document.getElementById("name").value;
-      const email = document.getElementById("email").value;
-      const message = document.getElementById("message").value;
+        const name = document.getElementById("name").value.trim();
+        const email = document.getElementById("email").value.trim();
+        const topic = document.getElementById("topic").value;
+        const message = document.getElementById("message").value.trim();
 
-      try {
-        const conversationId = crypto.randomUUID();
+        if (!name || !email || !message) {
+          alert("Please fill out all fields.");
+          return;
+        }
 
-        // Create empty conversation doc
-        await setDoc(doc(db, "conversations", conversationId), {
-          createdAt: serverTimestamp(),
-          name,
-          email
-        });
+        try {
+          // Create a new conversation
+          const convRef = doc(collection(db, "conversations"));
+          await setDoc(convRef, {
+            name,
+            email,
+            topic,
+            createdAt: new Date(),
+            messages: [
+              {
+                sender: "user",
+                text: message,
+                timestamp: new Date()
+              }
+            ]
+          });
 
-        // Add first message in messages subcollection
-        await addDoc(collection(db, "conversations", conversationId, "messages"), {
-          sender: "user",
-          name,
-          email,
-          text: message,
-          timestamp: serverTimestamp()
-        });
-
-        document.getElementById("result").innerHTML =
-          `Message sent!<br>
-          View your conversation here: <a href="response.html?id=${conversationId}" target="_blank">Open Conversation</a>`;
-        
-        document.getElementById("contactForm").reset();
-      } catch (err) {
-        console.error("Error creating conversation:", err);
-        alert("There was an error. Please try again.");
-      }
+          // Redirect user to conversation page
+          window.location.href = `response.html?id=${convRef.id}`;
+        } catch (err) {
+          console.error("Error creating conversation:", err);
+          alert("There was an error submitting your message. Please try again.");
+        }
+      });
     });
   </script>
+</head>
+<body>
+  <h1>Contact Us</h1>
+  <form id="contactForm">
+    <label for="name">Name:</label><br>
+    <input type="text" id="name" required><br><br>
+
+    <label for="email">Email:</label><br>
+    <input type="email" id="email" required><br><br>
+
+    <label for="topic">Topic:</label><br>
+    <select id="topic" required>
+      <option value="General">General</option>
+      <option value="Support">Support</option>
+      <option value="Feedback">Feedback</option>
+      <option value="Other">Other</option>
+    </select><br><br>
+
+    <label for="message">Message:</label><br>
+    <textarea id="message" required></textarea><br><br>
+
+    <button type="submit">Submit</button>
+  </form>
 </body>
 </html>
