@@ -18,9 +18,8 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-    import { getFirestore, collection, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+    import { getFirestore, collection, doc, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
-    // Your Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyDxMO7-n_ZXp-axX4wBRV8hsVfRmI-aVcM",
       authDomain: "afnanix-contact-form.firebaseapp.com",
@@ -42,21 +41,22 @@
       const message = document.getElementById("message").value;
 
       try {
-        // Generate a unique conversation ID
         const conversationId = crypto.randomUUID();
 
-        // Create the conversation doc
-        await setDoc(doc(collection(db, "conversations"), conversationId), {
+        // Create empty conversation doc
+        await setDoc(doc(db, "conversations", conversationId), {
           createdAt: serverTimestamp(),
-          messages: [
-            {
-              sender: "user",
-              name,
-              email,
-              text: message,
-              timestamp: serverTimestamp()
-            }
-          ]
+          name,
+          email
+        });
+
+        // Add first message in messages subcollection
+        await addDoc(collection(db, "conversations", conversationId, "messages"), {
+          sender: "user",
+          name,
+          email,
+          text: message,
+          timestamp: serverTimestamp()
         });
 
         document.getElementById("result").innerHTML =
