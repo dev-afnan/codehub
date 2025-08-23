@@ -6,7 +6,7 @@
   <title>Conversation</title>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-    import { getFirestore, doc, getDoc, updateDoc, onSnapshot, arrayUnion } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+    import { getFirestore, doc, onSnapshot, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDxMO7-n_ZXp-axX4wBRV8hsVfRmI-aVcM",
@@ -23,7 +23,6 @@
 
     const urlParams = new URLSearchParams(window.location.search);
     const conversationId = urlParams.get("id");
-
     let conversationRef;
 
     document.addEventListener("DOMContentLoaded", async () => {
@@ -33,6 +32,19 @@
       }
 
       conversationRef = doc(db, "conversations", conversationId);
+      const convURL = window.location.href;
+
+      // Copy link button
+      const copyContainer = document.getElementById("copyContainer");
+      const copyBtn = document.createElement("button");
+      copyBtn.textContent = "Copy Conversation Link";
+      copyContainer.appendChild(copyBtn);
+
+      copyBtn.addEventListener("click", () => {
+        navigator.clipboard.writeText(convURL).then(() => {
+          alert("Link copied to clipboard!");
+        });
+      });
 
       // Listen for updates
       onSnapshot(conversationRef, (docSnap) => {
@@ -77,9 +89,10 @@
 </head>
 <body>
   <h1>Conversation</h1>
+  <div id="copyContainer" style="margin-bottom: 10px;"></div>
   <div id="messages" style="border:1px solid #ccc; padding:10px; height:200px; overflow-y:auto;"></div>
 
-  <form id="sendForm">
+  <form id="sendForm" style="margin-top:10px;">
     <input type="text" id="newMessage" placeholder="Type your reply" required />
     <button type="submit">Send</button>
   </form>
