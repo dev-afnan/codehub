@@ -6,7 +6,7 @@
   <title>Contact Form</title>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, doc, setDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+    import { getFirestore, collection, doc, setDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
     // Firebase config
     const firebaseConfig = {
@@ -22,9 +22,10 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Handle form submit
     document.addEventListener("DOMContentLoaded", () => {
       const form = document.getElementById("contactForm");
+      const resultDiv = document.getElementById("resultDiv");
+
       form.addEventListener("submit", async (e) => {
         e.preventDefault();
 
@@ -47,16 +48,22 @@
             topic,
             createdAt: new Date(),
             messages: [
-              {
-                sender: "user",
-                text: message,
-                timestamp: new Date()
-              }
+              { sender: "user", text: message, timestamp: new Date() }
             ]
           });
 
-          // Redirect user to conversation page
-          window.location.href = `response.html?id=${convRef.id}`;
+          // Show link for user to save/bookmark
+          const convURL = `response.html?id=${convRef.id}`;
+          resultDiv.innerHTML = `
+            <p>Your message was submitted successfully!</p>
+            <p>The page where you will see the conversation:</p>
+            <a href="${convURL}" target="_blank">${convURL}</a>
+            <p><strong>Please save or bookmark this link to return to your conversation later.</strong></p>
+          `;
+
+          // Optionally, clear the form
+          form.reset();
+
         } catch (err) {
           console.error("Error creating conversation:", err);
           alert("There was an error submitting your message. Please try again.");
@@ -87,5 +94,7 @@
 
     <button type="submit">Submit</button>
   </form>
+
+  <div id="resultDiv" style="margin-top:20px;"></div>
 </body>
 </html>
