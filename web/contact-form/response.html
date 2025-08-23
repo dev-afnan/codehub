@@ -6,19 +6,18 @@
   <title>Conversation</title>
 </head>
 <body>
-  <h1>Conversation</h1>
+  <h1>Your Conversation</h1>
   <div id="messages"></div>
 
   <form id="replyForm">
-    <textarea id="replyMessage" placeholder="Type your reply..." required></textarea><br>
+    <textarea id="reply" placeholder="Type a reply" required></textarea><br>
     <button type="submit">Send</button>
   </form>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-    import { getFirestore, doc, getDoc, updateDoc, arrayUnion, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
-    // Your Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyDxMO7-n_ZXp-axX4wBRV8hsVfRmI-aVcM",
       authDomain: "afnanix-contact-form.firebaseapp.com",
@@ -32,43 +31,46 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Get conversation ID from URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const conversationId = urlParams.get("id");
-    const conversationRef = doc(db, "conversations", conversationId);
+    const params = new URLSearchParams(window.location.search);
+    const conversationId = params.get("id");
+    if (!conversationId) {
+      alert("No conversation ID.");
+      throw new Error("Missing conversation ID");
+    }
 
-    // Listen for conversation updates
-    onSnapshot(conversationRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        const messagesDiv = document.getElementById("messages");
-        messagesDiv.innerHTML = "";
-        data.messages.forEach(msg => {
-          const p = document.createElement("p");
-          p.textContent = `[${msg.sender}] ${msg.text}`;
-          messagesDiv.appendChild(p);
-        });
-      }
+    const messagesDiv = document.getElementById("messages");
+
+    // Real-time listener for messages
+    const q = query(
+      collection(db, "conversations", conversationId, "messages"),
+      orderBy("timestamp", "asc")
+    );
+
+    onSnapshot(q, (snapshot) => {
+      messagesDiv.innerHTML = "";
+      snapshot.forEach((doc) => {
+        const msg = doc.data();
+        const div = document.createElement("div");
+        div.textContent = `${msg.sender}: ${msg.text}`;
+        messagesDiv.appendChild(div);
+      });
     });
 
-    // Send a reply
+    // Add new message
     document.getElementById("replyForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const text = document.getElementById("replyMessage").value;
+      const text = document.getElementById("reply").value;
 
       try {
-        await updateDoc(conversationRef, {
-          messages: arrayUnion({
-            sender: "user", // from response page, still the user
-            text,
-            timestamp: serverTimestamp()
-          })
+        await addDoc(collection(db, "conversations", conversationId, "messages"), {
+          sender: "user",
+          text,
+          timestamp: serverTimestamp()
         });
-
-        document.getElementById("replyMessage").value = "";
+        document.getElementById("reply").value = "";
       } catch (err) {
         console.error("Error sending message:", err);
-        alert("Error sending message.");
+        alert("Failed to send message.");
       }
     });
   </script>
