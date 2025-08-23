@@ -1,119 +1,179 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Panel</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel</title>
+<style>
+body { font-family:sans-serif; max-width:800px; margin:auto; padding:20px; }
+h2 { text-align:center; }
+#loginPrompt { text-align:center; margin-top:20px; }
+#conversationList { margin-top:20px; display:none; }
+.conversation { border:1px solid #ccc; border-radius:5px; padding:10px; margin-bottom:10px; cursor:pointer; }
+#messages { border:1px solid #ccc; border-radius:5px; padding:10px; height:400px; overflow-y:auto; margin-bottom:20px; display:flex; flex-direction:column; }
+.message { margin:5px 0; padding:6px 10px; border-radius:5px; max-width:75%; }
+.user { background:#e1f5fe; align-self:flex-start; }
+.admin { background:#c8e6c9; align-self:flex-end; margin-left:auto; }
+form { display:flex; gap:10px; }
+input[type=text] { flex:1; padding:8px; border:1px solid #ccc; border-radius:5px; }
+button { padding:8px 16px; cursor:pointer; background:#007bff; border:none; color:#fff; border-radius:5px; }
+button:hover { background:#0056b3; }
+</style>
 </head>
 <body>
-  <h1>Admin Panel</h1>
-  <button id="loginBtn">Login with Google</button>
-  <div id="conversations"></div>
-  <div id="chat"></div>
+<h2>Admin Panel</h2>
 
-  <form id="adminReplyForm" style="display:none;">
-    <textarea id="adminReply" placeholder="Reply as admin" required></textarea><br>
+<div id="loginPrompt">
+  <button id="googleLoginBtn">Sign in with Google</button>
+</div>
+
+<div id="conversationList"></div>
+
+<div id="conversationArea" style="display:none;">
+  <h3>Conversation</h3>
+  <div id="messages"></div>
+  <form id="replyForm">
+    <input type="text" id="replyMessage" placeholder="Type your reply..." required>
     <button type="submit">Send</button>
   </form>
+</div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-    import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+import { getFirestore, collection, getDocs, doc, onSnapshot, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDxMO7-n_ZXp-axX4wBRV8hsVfRmI-aVcM",
-      authDomain: "afnanix-contact-form.firebaseapp.com",
-      projectId: "afnanix-contact-form",
-      storageBucket: "afnanix-contact-form.firebasestorage.app",
-      messagingSenderId: "994386258441",
-      appId: "1:994386258441:web:5e1b2b412a3778845da6d8",
-      measurementId: "G-1TNH5G7SE4"
-    };
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyDxMO7-n_ZXp-axX4wBRV8hsVfRmI-aVcM",
+  authDomain: "afnanix-contact-form.firebaseapp.com",
+  projectId: "afnanix-contact-form",
+  storageBucket: "afnanix-contact-form.firebasestorage.app",
+  messagingSenderId: "994386258441",
+  appId: "1:994386258441:web:5e1b2b412a3778845da6d8",
+  measurementId: "G-1TNH5G7SE4"
+};
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
 
-    const ADMIN_UID = "ph5bDK8VzAOJzqaQxrEje2Z5eK13"; // your UID
+// Replace this with your actual admin UID from Firebase Authentication
+const ADMIN_UID = "YOUR_ADMIN_UID";
 
-    let currentConversation = null;
+let currentConvRef = null;
 
-    document.getElementById("loginBtn").addEventListener("click", async () => {
-      try {
-        await signInWithPopup(auth, provider);
-      } catch (err) {
-        console.error("Login failed:", err);
+// Render a message
+function renderMessage(msg, container) {
+  const div = document.createElement("div");
+  div.className = "message " + msg.sender;
+  div.textContent = `${msg.sender}: ${msg.text}`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+// Show conversation
+function showConversation(convId) {
+  currentConvRef = doc(db, "conversations", convId);
+  document.getElementById("conversationArea").style.display = "block";
+  const messagesDiv = document.getElementById("messages");
+  messagesDiv.innerHTML = "";
+
+  onSnapshot(currentConvRef, (snap) => {
+    if (snap.exists()) {
+      messagesDiv.innerHTML = "";
+      const data = snap.data();
+      if (data.messages && data.messages.length) {
+        data.messages.forEach(msg => renderMessage(msg, messagesDiv));
       }
+    } else {
+      messagesDiv.innerHTML = "<p>Conversation not found.</p>";
+    }
+  });
+}
+
+// Send admin reply
+document.getElementById("replyForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!currentConvRef) return;
+  const text = document.getElementById("replyMessage").value.trim();
+  if (!text) return;
+
+  try {
+    await updateDoc(currentConvRef, {
+      messages: arrayUnion({
+        sender: "admin",
+        text,
+        timestamp: new Date().toISOString()
+      })
     });
+    document.getElementById("replyMessage").value = "";
+  } catch (err) {
+    console.error("Error sending admin message:", err);
+    alert("Access denied or Firestore rules prevent this action.");
+  }
+});
 
-    onAuthStateChanged(auth, (user) => {
-      if (!user) return;
-      if (user.uid !== ADMIN_UID) {
-        alert("Access denied. Not an admin.");
-        return;
-      }
-      loadConversations();
-    });
-
-    function loadConversations() {
-      const conversationsDiv = document.getElementById("conversations");
-      const q = query(collection(db, "conversations"), orderBy("createdAt", "desc"));
-
-      onSnapshot(q, (snapshot) => {
-        conversationsDiv.innerHTML = "<h2>Conversations</h2>";
-        snapshot.forEach((doc) => {
-          const conv = doc.data();
-          const div = document.createElement("div");
-          div.innerHTML = `<button data-id="${doc.id}">${conv.name || "Unknown"} (${doc.id})</button>`;
-          conversationsDiv.appendChild(div);
-        });
-
-        conversationsDiv.querySelectorAll("button").forEach((btn) => {
-          btn.addEventListener("click", () => {
-            currentConversation = btn.getAttribute("data-id");
-            loadMessages(currentConversation);
-          });
-        });
+// Load all conversations
+async function loadConversations() {
+  const convList = document.getElementById("conversationList");
+  convList.style.display = "block";
+  convList.innerHTML = "";
+  try {
+    const snapshot = await getDocs(collection(db, "conversations"));
+    if (snapshot.empty) {
+      convList.innerHTML = "<p>No conversations yet.</p>";
+    } else {
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        const div = document.createElement("div");
+        div.className = "conversation";
+        div.textContent = `${data.name} (${data.topic})`;
+        div.addEventListener("click", () => showConversation(docSnap.id));
+        convList.appendChild(div);
       });
     }
+  } catch (err) {
+    console.error("Firestore access denied:", err);
+    alert("Access denied. Your account is not allowed to access admin panel.");
+    await signOut(auth);
+    document.getElementById("loginPrompt").style.display = "block";
+    convList.style.display = "none";
+  }
+}
 
-    function loadMessages(conversationId) {
-      const chatDiv = document.getElementById("chat");
-      const q = query(
-        collection(db, "conversations", conversationId, "messages"),
-        orderBy("timestamp", "asc")
-      );
-
-      onSnapshot(q, (snapshot) => {
-        chatDiv.innerHTML = "";
-        snapshot.forEach((doc) => {
-          const msg = doc.data();
-          const div = document.createElement("div");
-          div.textContent = `${msg.sender}: ${msg.text}`;
-          chatDiv.appendChild(div);
-        });
-        document.getElementById("adminReplyForm").style.display = "block";
-      });
+// Google login button
+document.getElementById("googleLoginBtn").addEventListener("click", async () => {
+  try {
+    const result = await signInWithPopup(auth, provider);
+    console.log("Signed-in user UID:", result.user.uid);
+    if (result.user.uid !== ADMIN_UID) {
+      alert("Access denied. This account is not an admin.");
+      await signOut(auth);
+      return;
     }
+    document.getElementById("loginPrompt").style.display = "none";
+    await loadConversations();
+  } catch (err) {
+    console.error("Login error:", err);
+    alert("Login failed. Please try again.");
+  }
+});
 
-    document.getElementById("adminReplyForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      if (!currentConversation) return;
-      const text = document.getElementById("adminReply").value;
-
-      try {
-        await addDoc(collection(db, "conversations", currentConversation, "messages"), {
-          sender: "admin",
-          text,
-          timestamp: serverTimestamp()
-        });
-        document.getElementById("adminReply").value = "";
-      } catch (err) {
-        console.error("Error sending admin reply:", err);
-      }
-    });
-  </script>
+// Handle already signed-in users
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    console.log("Signed-in user UID:", user.uid);
+    if (user.uid !== ADMIN_UID) {
+      alert("Access denied. This account is not an admin.");
+      await signOut(auth);
+      return;
+    }
+    document.getElementById("loginPrompt").style.display = "none";
+    await loadConversations();
+  }
+});
+</script>
 </body>
-</html>
+  </html>
