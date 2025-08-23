@@ -8,7 +8,6 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
     import { getFirestore, collection, doc, setDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
-    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyDxMO7-n_ZXp-axX4wBRV8hsVfRmI-aVcM",
       authDomain: "afnanix-contact-form.firebaseapp.com",
@@ -40,7 +39,6 @@
         }
 
         try {
-          // Create a new conversation
           const convRef = doc(collection(db, "conversations"));
           await setDoc(convRef, {
             name,
@@ -52,17 +50,23 @@
             ]
           });
 
-          // Show link for user to save/bookmark
           const convURL = `response.html?id=${convRef.id}`;
           resultDiv.innerHTML = `
             <p>Your message was submitted successfully!</p>
             <p>The page where you will see the conversation:</p>
-            <a href="${convURL}" target="_blank">${convURL}</a>
+            <a href="${convURL}" target="_blank">${convURL}</a><br><br>
+            <button id="copyBtn">Copy Link</button>
             <p><strong>Please save or bookmark this link to return to your conversation later.</strong></p>
           `;
 
-          // Optionally, clear the form
           form.reset();
+
+          // Copy link functionality
+          document.getElementById("copyBtn").addEventListener("click", () => {
+            navigator.clipboard.writeText(convURL).then(() => {
+              alert("Link copied to clipboard!");
+            });
+          });
 
         } catch (err) {
           console.error("Error creating conversation:", err);
